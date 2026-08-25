@@ -1,0 +1,1 @@
+# SupportIQ Schemas Module Placeholder

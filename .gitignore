@@ -1,0 +1,42 @@
+# Python Byte Code & Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Environment Variables & API Keys (CRITICAL SECURITY)
+.env
+.env.local
+*.env
+
+# Local Chroma Database & Vector Index Storage
+storage/
+storage/chromadb/
+*.sqlite3
+
+# Logs & Temporary Files
+*.log
+logs/
+tmp/
+.ds_store
+Thumbs.db
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+
+client_Requirements/
+NovaCart_SupportIQ_Knowledge_Base/
+
