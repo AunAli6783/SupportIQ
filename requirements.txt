@@ -9,6 +9,8 @@ langchain-ollama>=0.1.0
 # Vector Database & Ultra-Lightweight Embeddings (90MB CPU Model)
 chromadb>=0.4.22
 sentence-transformers>=2.2.2
+langchain-huggingface>=0.0.1
+langchain-chroma>=0.1.0
 
 # Data Processing & Environment
 pandas>=2.0.0
