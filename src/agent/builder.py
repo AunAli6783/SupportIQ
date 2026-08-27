@@ -24,11 +24,18 @@ def get_llm_model():
     - Groq (Free API Key via Groq Cloud, 0 MB disk footprint)
     - Ollama (Local micro model < 1.3 GB disk footprint)
     """
+    import os
+    if settings.GOOGLE_API_KEY:
+        os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY
+    if settings.GROQ_API_KEY:
+        os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
+
     provider = settings.LLM_PROVIDER.lower()
-    
+
     if provider == "google":
         return ChatGoogleGenerativeAI(
             model=settings.DEFAULT_MODEL_NAME or "gemini-3.6-flash",
+            api_key=settings.GOOGLE_API_KEY,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.0
         )
@@ -47,6 +54,7 @@ def get_llm_model():
         # Default fallback to Google Gemini Free Tier
         return ChatGoogleGenerativeAI(
             model="gemini-3.6-flash",
+            api_key=settings.GOOGLE_API_KEY,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.0
         )

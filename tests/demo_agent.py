@@ -89,6 +89,8 @@ def run_agent_demo():
             print(f"    [Execution Error/Note]: {str(e)}\n")
 
         print("-" * 75 + "\n")
+        import time
+        time.sleep(2)
 
 if __name__ == "__main__":
     run_agent_demo()

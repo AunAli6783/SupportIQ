@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     ENFORCE_ORDER_OWNERSHIP: bool = True
     
     model_config = ConfigDict(
-        env_file=".env",
+        env_file=str(Path(__file__).resolve().parent.parent.parent / ".env"),
         env_file_encoding="utf-8",
         extra="ignore"
     )
