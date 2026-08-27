@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: Optional[str] = None
     
     # Default Model Names (100% Free Tiers)
-    DEFAULT_MODEL_NAME: str = "gemini-1.5-flash"
+    DEFAULT_MODEL_NAME: str = "gemini-3.6-flash"
     
     # Ultra-Lightweight Free Embedding Model (~90MB local download, CPU fast)
     EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
