@@ -36,7 +36,11 @@ Thumbs.db
 *.swp
 *.swo
 
+# Node / Next.js Frontend Exclusions
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.vercel/
 
 client_Requirements/
 NovaCart_SupportIQ_Knowledge_Base/
-
