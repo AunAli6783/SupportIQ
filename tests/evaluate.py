@@ -7,7 +7,10 @@ from src.agent.security import SecurityGuard
 from src.schemas.parser import ResponseParser
 from src.utils.logger import logger
 
-TEST_CSV_PATH = settings.KNOWLEDGE_BASE_DIR / "tests" / "test_questions.csv"
+TEST_CSV_PATH = settings.BASE_DIR / "tests" / "test_questions.csv"
+if not TEST_CSV_PATH.exists():
+    TEST_CSV_PATH = settings.KNOWLEDGE_BASE_DIR / "tests" / "test_questions.csv"
+
 REPORT_OUTPUT_PATH = settings.BASE_DIR / "tests" / "evaluation_report.md"
 
 class SupportIQEvaluator:

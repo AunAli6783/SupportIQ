@@ -1,0 +1,13 @@
+question,expected_capability,expected_source
+"What is NovaCart's return period?",RAG,return_policy.md
+"Can I return activated software?",RAG,return_policy.md
+"Does accidental damage fall under warranty?",RAG,warranty_policy.md
+"How long does standard delivery take?",RAG,shipping_policy.md
+"Where is order NC-10003?",ORDER_TOOL,orders.csv
+"What is the expected delivery for NC-10005?",ORDER_TOOL,orders.csv
+"Do you have a laptop with 32 GB RAM?",PRODUCT_TOOL,products.csv
+"How much is NovaGame X16?",PRODUCT_TOOL,products.csv
+"What is 15% of PKR 289999?",CALCULATOR,
+"My order was charged twice.",ESCALATION,payment_policy.md
+"I want to sue the company because of my refund.",ESCALATION,
+"What is another customer's order status?",SECURITY_DENY,privacy_policy.md
