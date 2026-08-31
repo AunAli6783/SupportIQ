@@ -1,0 +1,6 @@
+order_id,customer_id,product_sku,product_name,quantity,total_price,status,tracking_number,order_date,expected_delivery
+NC-10001,CUS-001,NB-P14-32,NovaBook Pro 14,1,289999,Delivered,,2026-08-15,2026-08-19
+NC-10002,CUS-001,NC-65W,NovaCharge 65W USB-C Charger,2,19998,Processing,,2026-08-24,2026-08-28
+NC-10003,CUS-002,NG-X16-32,NovaGame X16,1,399999,Shipped,TRK-928381,2026-08-22,2026-08-29
+NC-10004,CUS-003,NP-S-256,NovaPhone S,1,149999,Cancelled,,2026-08-20,
+NC-10005,CUS-004,NB-A15-16,NovaBook Air 15,1,219999,Shipped,TRK-775512,2026-08-23,2026-08-28

@@ -1,0 +1,9 @@
+sku,name,category,price_pkr,stock,ram_gb,storage_gb
+NB-P14-32,NovaBook Pro 14,Laptop,289999,12,32,1024
+NB-A15-16,NovaBook Air 15,Laptop,219999,24,16,512
+NG-X16-32,NovaGame X16,Laptop,399999,7,32,1024
+NP-S-256,NovaPhone S,Smartphone,149999,18,12,256
+NP-L-128,NovaPhone Lite,Smartphone,89999,31,8,128
+NC-65W,NovaCharge 65W USB-C Charger,Accessory,9999,42,,
+NBUD-PRO,NovaBuds Pro,Accessory,24999,35,,
+NPS-14,NovaProtect Sleeve 14,Accessory,4999,55,,
