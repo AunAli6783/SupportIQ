@@ -46,6 +46,12 @@ class ResponseParser:
                     source_matches = re.findall(r"Source:\s*([a-zA-Z0-9_\-]+\.md)", str(observation))
                     for src in set(source_matches):
                         sources.append(SourceCitation(source=src))
+                elif tool_name == "search_internet":
+                    category = "internet_search"
+                    # Extract URLs from internet search results
+                    url_matches = re.findall(r"Source URL:\s*(https?://[^\s]+)", str(observation))
+                    for url in set(url_matches):
+                        sources.append(SourceCitation(source=url, category="web_search"))
 
         # Direct text check for escalation or denial
         if "escalated to NovaCart Senior Human Support" in answer_text or "TICKET-NC" in answer_text:
