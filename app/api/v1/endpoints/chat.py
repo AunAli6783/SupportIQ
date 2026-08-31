@@ -100,8 +100,22 @@ async def get_chat_history_endpoint(conversation_id: str):
 
 @router.delete("/chat/session/{conversation_id}", tags=["Chat"])
 async def clear_chat_session_endpoint(conversation_id: str):
-    """Clear and purge chat history for a session ID."""
+    """Clear memory history for a session."""
     SessionMemoryManager.clear_session(conversation_id)
     return {"message": f"Session history for conversation_id='{conversation_id}' has been cleared."}
 
 
+@router.get("/reports/download/{filename}", tags=["Reports"])
+async def download_report_endpoint(filename: str):
+    """Download generated PowerPoint sales presentation or analytics report file."""
+    from fastapi.responses import FileResponse
+    from src.config.settings import settings
+    file_path = settings.BASE_DIR / "storage" / "reports" / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Requested report file not found.")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=filename,
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )

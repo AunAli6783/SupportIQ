@@ -21,6 +21,12 @@ python-dotenv>=1.0.0
 # Safe Math Engine
 numexpr>=2.8.0
 
+# Live Internet Search Engine
+ddgs>=9.0.0
+
+# PowerPoint & Reports Generation Engine
+python-pptx>=1.0.0
+
 # API Backend & Streaming
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0

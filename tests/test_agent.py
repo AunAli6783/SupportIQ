@@ -19,7 +19,7 @@ def test_support_agent_construction():
     """Verify agent builder constructs valid AgentExecutor binding all tools."""
     agent = create_support_agent()
     assert agent is not None
-    assert len(agent.tools) == 6
+    assert len(agent.tools) == 8
     tool_names = [t.name for t in agent.tools]
     assert "get_order_status" in tool_names
     assert "search_products" in tool_names
@@ -27,6 +27,8 @@ def test_support_agent_construction():
     assert "search_knowledge_base" in tool_names
     assert "escalate_to_human" in tool_names
     assert "search_internet" in tool_names
+    assert "get_sales_statistics" in tool_names
+    assert "create_sales_presentation" in tool_names
 
 def test_system_prompt_contains_rules():
     """Verify system prompt template contains operational rules."""
@@ -34,3 +36,4 @@ def test_system_prompt_contains_rules():
     assert "KNOWLEDGE BASE GROUNDING" in SYSTEM_PROMPT_TEMPLATE
     assert "HUMAN ESCALATION CONDITIONS" in SYSTEM_PROMPT_TEMPLATE
     assert "INTERNET SEARCH ROUTING" in SYSTEM_PROMPT_TEMPLATE
+    assert "SALES ANALYTICS & PRESENTATION GENERATOR" in SYSTEM_PROMPT_TEMPLATE

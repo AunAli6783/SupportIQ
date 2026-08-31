@@ -16,6 +16,8 @@ from src.tools.calculator_tool import calculate
 from src.tools.knowledge_tool import search_knowledge_base
 from src.tools.escalation_tool import escalate_to_human
 from src.tools.internet_tool import search_internet
+from src.tools.analytics_tool import get_sales_statistics
+from src.tools.ppt_tool import create_sales_presentation
 from src.utils.logger import logger
 
 def get_llm_model():
@@ -68,7 +70,9 @@ def create_support_agent() -> AgentExecutor:
         calculate,
         search_knowledge_base,
         escalate_to_human,
-        search_internet
+        search_internet,
+        get_sales_statistics,
+        create_sales_presentation
     ]
 
     llm = get_llm_model()

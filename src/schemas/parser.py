@@ -52,6 +52,10 @@ class ResponseParser:
                     url_matches = re.findall(r"Source URL:\s*(https?://[^\s]+)", str(observation))
                     for url in set(url_matches):
                         sources.append(SourceCitation(source=url, category="web_search"))
+                elif tool_name == "create_sales_presentation":
+                    category = "presentation_generation"
+                elif tool_name == "get_sales_statistics":
+                    category = "sales_analytics"
 
         # Direct text check for escalation or denial
         if "escalated to NovaCart Senior Human Support" in answer_text or "TICKET-NC" in answer_text:
@@ -59,6 +63,9 @@ class ResponseParser:
             category = "escalation"
         elif "SECURITY DENIED" in answer_text:
             category = "security_denied"
+        elif "Sales_Performance_Report.pptx" in answer_text or "PowerPoint" in answer_text:
+            if category == "general_inquiry":
+                category = "presentation_generation"
 
         # Suggested follow-up actions based on category
         suggested = []
@@ -70,6 +77,10 @@ class ResponseParser:
             suggested = ["Check ticket status", "Upload receipt"]
         elif category == "product_search":
             suggested = ["Compare specifications", "Check shipping time", "Place order"]
+        elif category == "presentation_generation":
+            suggested = ["Download PowerPoint (.pptx)", "View Product Breakdown", "Show Monthly Trends"]
+        elif category == "sales_analytics":
+            suggested = ["Create Sales Presentation (.pptx)", "View Top Products", "Compare Categories"]
 
         return SupportResponse(
             answer=answer_text.strip(),

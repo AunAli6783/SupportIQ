@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { 
   Send, Bot, User, ShieldAlert, Sparkles, RefreshCw, Layers, CheckCircle2, 
   MessageSquare, Plus, Globe, Copy, Check, ExternalLink, Package, ShoppingBag, 
-  Calculator, ShieldCheck, Trash2
+  Calculator, ShieldCheck, Trash2, FileText, Download, BarChart3, Presentation
 } from "lucide-react";
 
 interface SourceCitation {
@@ -125,6 +125,14 @@ export default function SupportIQChat() {
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
+  const handleActionClick = (act: string) => {
+    if (act.toLowerCase().includes("download") || act.toLowerCase().includes(".pptx")) {
+      window.open(`${API_URL}/reports/download/NovaCart_Sales_Performance_Report.pptx`, "_blank");
+    } else {
+      handleSendMessage(act);
+    }
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || input;
     if (!query.trim() || loading) return;
@@ -200,6 +208,10 @@ export default function SupportIQChat() {
         return <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800 text-emerald-300"><Layers className="w-3 h-3" /> Policy Knowledge</span>;
       case "internet_search":
         return <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-800 text-cyan-300"><Globe className="w-3 h-3" /> Live Web Search</span>;
+      case "presentation_generation":
+        return <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-indigo-950/80 border border-indigo-700 text-indigo-300"><Presentation className="w-3 h-3 text-indigo-400" /> PowerPoint Presentation</span>;
+      case "sales_analytics":
+        return <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-teal-950/80 border border-teal-800 text-teal-300"><BarChart3 className="w-3 h-3 text-teal-400" /> Sales Analytics</span>;
       case "calculation":
         return <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-amber-950/80 border border-amber-800 text-amber-300"><Calculator className="w-3 h-3" /> Financial Calculation</span>;
       case "escalation":
@@ -348,11 +360,11 @@ export default function SupportIQChat() {
                   Return policy for unopened items?
                 </button>
                 <button
-                  onClick={() => handleSendMessage("What are the latest gaming laptop trends in 2026?")}
+                  onClick={() => handleSendMessage("Create a PowerPoint presentation showing our product sales performance and statistics.")}
                   className="p-3.5 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/40 rounded-xl text-xs text-slate-300 transition"
                 >
-                  <span className="font-semibold text-slate-200 block mb-1">🌐 Live Web Search</span>
-                  Latest laptop trends in 2026?
+                  <span className="font-semibold text-indigo-300 block mb-1 flex items-center gap-1.5"><Presentation className="w-3.5 h-3.5 text-indigo-400" /> Sales Analytics Presentation</span>
+                  Generate sales slides (.pptx)
                 </button>
               </div>
             </div>
@@ -441,15 +453,23 @@ export default function SupportIQChat() {
                   {/* SUGGESTED ACTIONS BUTTONS */}
                   {msg.suggested_actions && msg.suggested_actions.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-1">
-                      {msg.suggested_actions.map((act, aIdx) => (
-                        <button
-                          key={aIdx}
-                          onClick={() => handleSendMessage(act)}
-                          className="text-xs px-3 py-1.5 bg-slate-900 hover:bg-indigo-600/30 hover:border-indigo-500 border border-slate-800 rounded-lg text-slate-300 transition"
-                        >
-                          {act}
-                        </button>
-                      ))}
+                      {msg.suggested_actions.map((act, aIdx) => {
+                        const isDownload = act.toLowerCase().includes("download") || act.toLowerCase().includes(".pptx");
+                        return (
+                          <button
+                            key={aIdx}
+                            onClick={() => handleActionClick(act)}
+                            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+                              isDownload
+                                ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30 font-semibold"
+                                : "bg-slate-900 hover:bg-indigo-600/30 hover:border-indigo-500 border border-slate-800 text-slate-300"
+                            }`}
+                          >
+                            {isDownload && <Download className="w-3.5 h-3.5" />}
+                            {act}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

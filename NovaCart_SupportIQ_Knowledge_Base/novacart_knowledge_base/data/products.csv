@@ -1,9 +1,17 @@
-sku,name,category,price_pkr,stock,ram_gb,storage_gb
-NB-P14-32,NovaBook Pro 14,Laptop,289999,12,32,1024
-NB-A15-16,NovaBook Air 15,Laptop,219999,24,16,512
-NG-X16-32,NovaGame X16,Laptop,399999,7,32,1024
-NP-S-256,NovaPhone S,Smartphone,149999,18,12,256
-NP-L-128,NovaPhone Lite,Smartphone,89999,31,8,128
-NC-65W,NovaCharge 65W USB-C Charger,Accessory,9999,42,,
-NBUD-PRO,NovaBuds Pro,Accessory,24999,35,,
-NPS-14,NovaProtect Sleeve 14,Accessory,4999,55,,
+sku,name,category,price_pkr,stock,ram_gb,storage_gb,rating,warranty_months
+NB-P14-32,NovaBook Pro 14,Laptop,289999,12,32,1024,4.9,24
+NB-A15-16,NovaBook Air 15,Laptop,219999,24,16,512,4.7,24
+NG-X16-32,NovaGame X16,Laptop,399999,7,32,1024,4.8,24
+NB-E13-8,NovaBook Essential 13,Laptop,149999,35,8,256,4.5,12
+NP-S-256,NovaPhone S,Smartphone,149999,18,12,256,4.8,12
+NP-L-128,NovaPhone Lite,Smartphone,89999,31,8,128,4.4,12
+NP-U-512,NovaPhone Ultra,Smartphone,219999,14,16,512,4.9,24
+NC-65W,NovaCharge 65W USB-C Charger,Accessory,9999,42,,,4.6,12
+NC-120W,NovaCharge 120W Fast Hub,Accessory,18999,28,,,4.8,12
+NBUD-PRO,NovaBuds Pro,Audio,24999,35,,,4.7,12
+NBUD-AIR,NovaBuds Air,Audio,12999,50,,,4.5,12
+NPS-14,NovaProtect Sleeve 14,Accessory,4999,55,,,4.6,6
+NPS-16,NovaProtect Sleeve 16,Accessory,5999,40,,,4.6,6
+NDIS-27,NovaVision 27-inch 4K Monitor,Display,119999,15,,,4.8,36
+NK-MECH,NovaType Mechanical Keyboard,Accessory,14999,45,,,4.7,12
+NM-RGB,NovaGrip Wireless Gaming Mouse,Accessory,8999,60,,,4.6,12
