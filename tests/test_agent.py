@@ -16,19 +16,21 @@ def test_prompt_injection_guard_allows_safe_input():
     assert "Passed security inspection" in msg
 
 def test_support_agent_construction():
-    """Verify agent builder constructs valid AgentExecutor binding all 5 tools."""
+    """Verify agent builder constructs valid AgentExecutor binding all tools."""
     agent = create_support_agent()
     assert agent is not None
-    assert len(agent.tools) == 5
+    assert len(agent.tools) == 6
     tool_names = [t.name for t in agent.tools]
     assert "get_order_status" in tool_names
     assert "search_products" in tool_names
     assert "calculate" in tool_names
     assert "search_knowledge_base" in tool_names
     assert "escalate_to_human" in tool_names
+    assert "search_internet" in tool_names
 
 def test_system_prompt_contains_rules():
     """Verify system prompt template contains operational rules."""
     assert "SupportIQ" in SYSTEM_PROMPT_TEMPLATE
     assert "KNOWLEDGE BASE GROUNDING" in SYSTEM_PROMPT_TEMPLATE
     assert "HUMAN ESCALATION CONDITIONS" in SYSTEM_PROMPT_TEMPLATE
+    assert "INTERNET SEARCH ROUTING" in SYSTEM_PROMPT_TEMPLATE
