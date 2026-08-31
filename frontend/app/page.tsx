@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Send, Bot, User, ShieldAlert, Sparkles, RefreshCw, Layers, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Send, Bot, User, ShieldAlert, Sparkles, RefreshCw, Layers, CheckCircle2, MessageSquare, Plus, History } from "lucide-react";
 
 interface SourceCitation {
   source: string;
@@ -22,10 +22,68 @@ export default function SupportIQChat() {
   const [conversationId, setConversationId] = useState("conv_" + Math.random().toString(36).substring(2, 9));
   const [customerId, setCustomerId] = useState("CUS-002");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [savedSessions, setSavedSessions] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
   const API_URL = "http://localhost:8000/api/v1";
+
+  // Load saved session IDs from localStorage on mount
+  useEffect(() => {
+    const local = localStorage.getItem("supportiq_sessions");
+    if (local) {
+      try {
+        setSavedSessions(JSON.parse(local));
+      } catch (e) {}
+    }
+  }, []);
+
+  // Save active conversationId to recent sessions list
+  useEffect(() => {
+    if (!conversationId) return;
+    setSavedSessions((prev) => {
+      if (prev.includes(conversationId)) return prev;
+      const updated = [conversationId, ...prev].slice(0, 8); // Keep top 8 recent
+      localStorage.setItem("supportiq_sessions", JSON.stringify(updated));
+      return updated;
+    });
+  }, [conversationId]);
+
+  // Fetch past conversation history when Active Session ID changes
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch(`${API_URL}/chat/history/${conversationId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && data.messages.length > 0) {
+            setMessages(data.messages);
+          } else {
+            setMessages([]);
+          }
+        }
+      } catch (e) {
+        // Silent fail if server offline
+      }
+    };
+
+    fetchHistory();
+  }, [conversationId]);
+
+  const handleNewChat = () => {
+    const newId = "conv_" + Math.random().toString(36).substring(2, 9);
+    setConversationId(newId);
+    setMessages([]);
+  };
+
+  const handleResetSession = async () => {
+    setMessages([]);
+    try {
+      await fetch(`${API_URL}/chat/session/${conversationId}`, { method: "DELETE" });
+    } catch (e) {}
+  };
 
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || input;
@@ -88,6 +146,13 @@ export default function SupportIQChat() {
             </div>
           </div>
 
+          <button
+            onClick={handleNewChat}
+            className="w-full flex items-center justify-center gap-2 mb-6 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium text-sm transition shadow-lg shadow-indigo-600/25"
+          >
+            <Plus className="w-4 h-4" /> Start New Chat
+          </button>
+
           <div className="space-y-4">
             <div>
               <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Session ID</label>
@@ -109,11 +174,36 @@ export default function SupportIQChat() {
               />
             </div>
 
+            {/* RECENT CONVERSATIONS HISTORY LIST */}
+            {savedSessions.length > 0 && (
+              <div>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                  <History className="w-3.5 h-3.5 text-indigo-400" /> Recent Sessions
+                </label>
+                <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                  {savedSessions.map((sId) => (
+                    <button
+                      key={sId}
+                      onClick={() => setConversationId(sId)}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-mono transition flex items-center justify-between ${
+                        sId === conversationId
+                          ? "bg-indigo-600/20 border border-indigo-500/50 text-indigo-300 font-semibold"
+                          : "bg-slate-800/50 hover:bg-slate-800 text-slate-400"
+                      }`}
+                    >
+                      <span className="truncate">{sId}</span>
+                      {sId === conversationId && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button
-              onClick={() => setMessages([])}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition"
+              onClick={handleResetSession}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition"
             >
-              <RefreshCw className="w-4 h-4" /> Reset Conversation
+              <RefreshCw className="w-3.5 h-3.5" /> Clear Current History
             </button>
           </div>
         </div>

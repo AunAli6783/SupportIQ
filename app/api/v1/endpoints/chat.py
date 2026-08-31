@@ -89,3 +89,19 @@ async def stream_chat_endpoint(payload: ChatRequestPayload):
             yield {"event": "error", "data": json.dumps({"error": str(e)})}
 
     return EventSourceResponse(event_generator())
+
+
+@router.get("/chat/history/{conversation_id}", tags=["Chat"])
+async def get_chat_history_endpoint(conversation_id: str):
+    """Retrieve formatted chat history for a session ID."""
+    history = SessionMemoryManager.get_formatted_history(conversation_id)
+    return {"conversation_id": conversation_id, "messages": history}
+
+
+@router.delete("/chat/session/{conversation_id}", tags=["Chat"])
+async def clear_chat_session_endpoint(conversation_id: str):
+    """Clear and purge chat history for a session ID."""
+    SessionMemoryManager.clear_session(conversation_id)
+    return {"message": f"Session history for conversation_id='{conversation_id}' has been cleared."}
+
+

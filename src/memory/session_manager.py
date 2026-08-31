@@ -34,6 +34,16 @@ class SessionMemoryManager:
         cls.get_history(conversation_id).add_ai_message(message)
 
     @classmethod
+    def get_formatted_history(cls, conversation_id: str) -> List[Dict[str, str]]:
+        """Get formatted list of message dicts for frontend rendering."""
+        msgs = cls.get_messages(conversation_id)
+        formatted = []
+        for msg in msgs:
+            role = "user" if msg.type in ["human", "user"] else "assistant"
+            formatted.append({"role": role, "content": msg.content})
+        return formatted
+
+    @classmethod
     def clear_session(cls, conversation_id: str):
         """Purge conversation session."""
         if conversation_id in cls._sessions:
