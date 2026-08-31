@@ -1,0 +1,95 @@
+================================================================================
+                    SupportIQ Master Commands Cheat Sheet
+================================================================================
+
+1. BACKEND & API SERVER COMMANDS (FastAPI & Uvicorn)
+--------------------------------------------------------------------------------
+# Start FastAPI backend server with live reload on port 8000:
+.\venv\Scripts\uvicorn app.main:app --reload --port 8000
+
+# Access interactive Swagger API documentation in browser:
+http://localhost:8000/docs
+
+# Access system health check endpoint in browser:
+http://localhost:8000/health
+
+
+2. FRONTEND APPLICATION COMMANDS (Next.js React & TypeScript)
+--------------------------------------------------------------------------------
+# Navigate into frontend folder and launch development web server:
+cd frontend
+npm run dev
+
+# Open frontend application in browser:
+http://localhost:3000
+
+# Install frontend dependencies (if package.json changes):
+cd frontend
+npm install
+
+# Build optimized production bundle for Next.js frontend:
+cd frontend
+npm run build
+
+
+3. VECTOR DATABASE & INGESTION COMMANDS (ChromaDB & Embeddings)
+--------------------------------------------------------------------------------
+# Populate/Update ChromaDB with knowledge base documents:
+.\venv\Scripts\python.exe -m src.ingestion.ingest
+
+# Clean wipe and fresh rebuild of ChromaDB from scratch:
+Remove-Item -Recurse -Force storage\chromadb
+.\venv\Scripts\python.exe -m src.ingestion.ingest
+
+# Trigger document ingestion via running FastAPI REST API:
+curl -X POST http://localhost:8000/api/v1/documents/ingest
+
+
+4. TESTING, BENCHMARKING & EVALUATION COMMANDS (Pytest & Benchmark Runner)
+--------------------------------------------------------------------------------
+# Run full automated test suite across all 28 tests (Phases 1-7):
+.\venv\Scripts\pytest.exe tests/
+
+# Run automated evaluation benchmark runner across test_questions.csv (Phase 9):
+.\venv\Scripts\python.exe -m tests.evaluate
+
+# View generated benchmark evaluation markdown report:
+tests\evaluation_report.md
+
+# Run specific phase unit tests:
+.\venv\Scripts\pytest.exe tests/test_agent.py
+.\venv\Scripts\pytest.exe tests/test_api.py
+.\venv\Scripts\pytest.exe tests/test_evaluation.py
+
+
+5. INTERACTIVE TERMINAL DEMOS
+--------------------------------------------------------------------------------
+# Run interactive SupportIQ terminal agent demo (Phases 1-5):
+.\venv\Scripts\python.exe tests/demo_agent.py
+
+# Run RAG vector search retriever demo (Phase 3):
+.\venv\Scripts\python.exe tests/demo_rag.py
+
+
+6. VIRTUAL ENVIRONMENT & DEPENDENCY MANAGEMENT
+--------------------------------------------------------------------------------
+# Create virtual environment (if starting fresh):
+python -m venv venv
+
+# Activate virtual environment in PowerShell:
+.\venv\Scripts\Activate.ps1
+
+# Install Python requirements:
+.\venv\Scripts\pip.exe install -r requirements.txt
+
+
+7. GIT VERSION CONTROL & SYNCHRONIZATION COMMANDS
+--------------------------------------------------------------------------------
+# Check repository status:
+git status
+
+# Commit and push changes to GitHub main branch:
+git add .
+git commit -m "your commit message"
+git push origin main
+================================================================================
