@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     # Free API Keys (Zero Local Disk Overhead)
     GOOGLE_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
+    SERPER_API_KEY: Optional[str] = None
     
     # Default Model Names (100% Free Tiers)
     DEFAULT_MODEL_NAME: str = "gemini-3.6-flash"
