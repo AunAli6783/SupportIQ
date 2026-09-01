@@ -40,11 +40,9 @@ def _detect_target(request: str) -> tuple[str, str]:
     """Detect if a specific product or category was requested in the prompt."""
     req_lower = request.lower()
     
-    # Check product match
     for prod in KNOWN_PRODUCTS:
         if prod.lower() in req_lower:
             return prod, ""
-        # Match short name like 'novabook pro' or 'novagame'
         short_names = prod.lower().split()
         if len(short_names) >= 2 and " ".join(short_names[:2]) in req_lower:
             return prod, ""
@@ -62,7 +60,6 @@ def _detect_target(request: str) -> tuple[str, str]:
     if "mouse" in req_lower:
         return "NovaGrip Wireless Gaming Mouse", ""
 
-    # Check category match
     for cat in KNOWN_CATEGORIES:
         if cat.lower() in req_lower or f"{cat.lower()}s" in req_lower:
             return "", cat
@@ -130,6 +127,33 @@ def _add_kpi_card(slide, left: float, top: float, width: float, height: float, t
         p3.text = subtext
         p3.font.size = Pt(9)
         p3.font.color.rgb = COLOR_TEXT_WHITE
+
+def _style_chart(chart, is_pie: bool = False):
+    """Ensure all chart labels, tick labels, and legends have high-contrast light text for dark theme."""
+    # 1. Legend Font Styling
+    if chart.has_legend:
+        chart.legend.font.color.rgb = RGBColor(241, 245, 249) # Crisp Light Slate
+        chart.legend.font.size = Pt(10)
+        chart.legend.font.bold = True
+
+    # 2. Data Labels (Numbers displayed on the chart slices/bars)
+    if chart.plots:
+        plot = chart.plots[0]
+        plot.has_data_labels = True
+        data_labels = plot.data_labels
+        data_labels.font.color.rgb = RGBColor(255, 255, 255) # Pure White
+        data_labels.font.size = Pt(10)
+        data_labels.font.bold = True
+
+    # 3. Category & Value Axis (for Bar / Column / Line charts)
+    if not is_pie:
+        if hasattr(chart, "category_axis"):
+            chart.category_axis.tick_labels.font.color.rgb = RGBColor(226, 232, 240) # Slate 200
+            chart.category_axis.tick_labels.font.size = Pt(9)
+            chart.category_axis.tick_labels.font.bold = True
+        if hasattr(chart, "value_axis"):
+            chart.value_axis.tick_labels.font.color.rgb = RGBColor(203, 213, 225) # Slate 300
+            chart.value_axis.tick_labels.font.size = Pt(9)
 
 @tool("create_sales_presentation")
 def create_sales_presentation(request: str = "Create comprehensive sales performance presentation") -> str:
@@ -210,9 +234,8 @@ def create_sales_presentation(request: str = "Create comprehensive sales perform
                 month_data = CategoryChartData()
                 month_data.categories = [m["month"] for m in monthly_trends]
                 month_data.add_series("Revenue (PKR)", tuple(m["revenue"] for m in monthly_trends))
-                chart3 = slide3.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.8), Inches(1.6), Inches(8.5), Inches(5.0), month_data).chart
-                chart3.has_legend = False
-                chart3.plots[0].has_data_labels = True
+                chart3_shape = slide3.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.8), Inches(1.6), Inches(8.5), Inches(5.0), month_data)
+                _style_chart(chart3_shape.chart, is_pie=False)
                 _add_kpi_card(slide3, 9.6, 1.6, 2.9, 5.0, "Trend Momentum", "Consistent Demand", f"Revenue Trajectory:\nPKR {total_revenue:,.0f}\n\nKey Spike Driver:\nStrong enterprise buying cycles and seasonal campaigns.", COLOR_EMERALD)
 
             # SLIDE 4: Category Peer Comparison (Native Column Chart)
@@ -222,9 +245,8 @@ def create_sales_presentation(request: str = "Create comprehensive sales perform
                 peer_data = CategoryChartData()
                 peer_data.categories = [p["product_name"] for p in peers]
                 peer_data.add_series("Revenue (PKR)", tuple(p["total_revenue"] for p in peers))
-                chart4 = slide4.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.8), Inches(1.6), Inches(8.5), Inches(5.0), peer_data).chart
-                chart4.has_legend = False
-                chart4.plots[0].has_data_labels = True
+                chart4_shape = slide4.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.8), Inches(1.6), Inches(8.5), Inches(5.0), peer_data)
+                _style_chart(chart4_shape.chart, is_pie=False)
                 _add_kpi_card(slide4, 9.6, 1.6, 2.9, 5.0, "Category Standing", "Category Benchmark", f"Selected Product:\n{prod_name}\n\nCategory Total:\nPKR {sum(p['total_revenue'] for p in peers):,.0f}", COLOR_CYAN)
 
             # SLIDE 5: Order Delivery & Status Breakdown (Native Pie Chart)
@@ -233,10 +255,11 @@ def create_sales_presentation(request: str = "Create comprehensive sales perform
             status_data = CategoryChartData()
             status_data.categories = ["Delivered", "Shipped", "Processing"]
             status_data.add_series("Units", (max(1, completed_orders - 1), 1, 1))
-            chart5 = slide5.shapes.add_chart(XL_CHART_TYPE.PIE, Inches(0.8), Inches(1.6), Inches(6.5), Inches(5.0), status_data).chart
+            chart5_shape = slide5.shapes.add_chart(XL_CHART_TYPE.PIE, Inches(0.8), Inches(1.6), Inches(6.5), Inches(5.0), status_data)
+            chart5 = chart5_shape.chart
             chart5.has_legend = True
             chart5.legend.position = XL_LEGEND_POSITION.RIGHT
-            chart5.plots[0].has_data_labels = True
+            _style_chart(chart5, is_pie=True)
             _add_kpi_card(slide5, 7.7, 1.6, 4.8, 2.3, "Fulfillment Success", f"{completed_orders} Completed", f"Zero critical shipping delays recorded\nAverage customer dispatch in 24 hours", COLOR_EMERALD)
             _add_kpi_card(slide5, 7.7, 4.2, 4.8, 2.4, "Stock Optimization", "Fast Reorder SLA", f"Maintain buffer stock > 15 units\nPrevent stockout delays during peak promotions", COLOR_PRIMARY)
 
@@ -268,10 +291,11 @@ def create_sales_presentation(request: str = "Create comprehensive sales perform
             status_data = CategoryChartData()
             status_data.categories = ["Delivered", "Shipped", "Processing", "Cancelled"]
             status_data.add_series("Orders", (18, 3, 3, 1))
-            chart2 = slide2.shapes.add_chart(XL_CHART_TYPE.PIE, Inches(0.8), Inches(1.6), Inches(6.5), Inches(5.0), status_data).chart
+            chart2_shape = slide2.shapes.add_chart(XL_CHART_TYPE.PIE, Inches(0.8), Inches(1.6), Inches(6.5), Inches(5.0), status_data)
+            chart2 = chart2_shape.chart
             chart2.has_legend = True
             chart2.legend.position = XL_LEGEND_POSITION.RIGHT
-            chart2.plots[0].has_data_labels = True
+            _style_chart(chart2, is_pie=True)
             _add_kpi_card(slide2, 7.7, 1.6, 4.8, 1.5, "Completed Orders", f"{completed_orders} Orders", "Successfully processed & delivered", COLOR_EMERALD)
             _add_kpi_card(slide2, 7.7, 3.4, 4.8, 1.5, "In-Transit / Processing", "6 Orders", "Active tracking numbers assigned", COLOR_CYAN)
             _add_kpi_card(slide2, 7.7, 5.2, 4.8, 1.4, "Cancellation Rate", f"{(cancelled_orders/total_orders*100):.1f}%", "Industry standard benchmark < 5%", COLOR_AMBER)
@@ -283,10 +307,11 @@ def create_sales_presentation(request: str = "Create comprehensive sales perform
                 pie_data = CategoryChartData()
                 pie_data.categories = [c["category"] for c in category_breakdown]
                 pie_data.add_series("Revenue (PKR)", tuple(c["total_revenue"] for c in category_breakdown))
-                chart3 = slide3.shapes.add_chart(XL_CHART_TYPE.PIE, Inches(0.8), Inches(1.6), Inches(6.8), Inches(5.0), pie_data).chart
+                chart3_shape = slide3.shapes.add_chart(XL_CHART_TYPE.PIE, Inches(0.8), Inches(1.6), Inches(6.8), Inches(5.0), pie_data)
+                chart3 = chart3_shape.chart
                 chart3.has_legend = True
                 chart3.legend.position = XL_LEGEND_POSITION.RIGHT
-                chart3.plots[0].has_data_labels = True
+                _style_chart(chart3, is_pie=True)
                 top_cat = category_breakdown[0]
                 _add_kpi_card(slide3, 8.0, 1.6, 4.5, 2.3, "Dominant Category", f"{top_cat['category']}", f"Revenue: PKR {top_cat['total_revenue']:,.0f}\nUnits: {top_cat['units_sold']} units sold\nShare: {(top_cat['total_revenue']/total_revenue*100):.1f}% of total sales", COLOR_PRIMARY)
                 second_cat = category_breakdown[1] if len(category_breakdown) > 1 else top_cat
@@ -300,9 +325,8 @@ def create_sales_presentation(request: str = "Create comprehensive sales perform
                 top_prods = product_breakdown[:6]
                 col_data.categories = [p["product_name"] for p in top_prods]
                 col_data.add_series("Units Sold", tuple(p["units_sold"] for p in top_prods))
-                chart4 = slide4.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.8), Inches(1.6), Inches(8.0), Inches(5.0), col_data).chart
-                chart4.has_legend = False
-                chart4.plots[0].has_data_labels = True
+                chart4_shape = slide4.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.8), Inches(1.6), Inches(8.0), Inches(5.0), col_data)
+                _style_chart(chart4_shape.chart, is_pie=False)
                 _add_kpi_card(slide4, 9.1, 1.6, 3.4, 5.0, "Volume Leaders", f"{top_prods[0]['product_name']}", f"Units Sold: {top_prods[0]['units_sold']}\n\nTop Revenue:\n{top_prods[0]['product_name']}\nPKR {top_prods[0]['total_revenue']:,.0f}\n\nFast Mover:\n{top_prods[1]['product_name'] if len(top_prods)>1 else ''}", COLOR_CYAN)
 
             # SLIDE 5: 2026 Monthly Revenue Trajectory (Native Monthly Growth Chart)
@@ -312,9 +336,8 @@ def create_sales_presentation(request: str = "Create comprehensive sales perform
                 month_data = CategoryChartData()
                 month_data.categories = [m["month"] for m in monthly_trends]
                 month_data.add_series("Monthly Revenue (PKR)", tuple(m["revenue"] for m in monthly_trends))
-                chart5 = slide5.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.8), Inches(1.6), Inches(8.5), Inches(5.0), month_data).chart
-                chart5.has_legend = False
-                chart5.plots[0].has_data_labels = True
+                chart5_shape = slide5.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.8), Inches(1.6), Inches(8.5), Inches(5.0), month_data)
+                _style_chart(chart5_shape.chart, is_pie=False)
                 _add_kpi_card(slide5, 9.6, 1.6, 2.9, 5.0, "Trajectory Insight", "Peak Month", f"Month: {monthly_trends[-1]['month']}\nRevenue: PKR {monthly_trends[-1]['revenue']:,.0f}\n\nConsistent upward momentum from Q1 inventory restock.", COLOR_EMERALD)
 
             # SLIDE 6: Strategic Action Matrix
@@ -328,7 +351,6 @@ def create_sales_presentation(request: str = "Create comprehensive sales perform
         output_dir = settings.BASE_DIR / "storage" / "reports"
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Save as standard filename and topic-specific filename
         filename = f"NovaCart_{re.sub(r'[^a-zA-Z0-9]', '_', target_prod or target_cat or 'Sales_Performance')}_Report.pptx"
         output_file = output_dir / filename
         master_file = output_dir / "NovaCart_Sales_Performance_Report.pptx"
@@ -347,6 +369,7 @@ def create_sales_presentation(request: str = "Create comprehensive sales perform
             f"• Revenue Analyzed: PKR {total_revenue:,.2f}\n"
             f"• Units Sold: {total_units} | Orders: {total_orders}\n"
             f"• Statistical Charts Included: Model Trend Chart, Category Peer Comparison Chart, Order Fulfillment Breakdown.\n"
+            f"• High-Contrast Typography: Chart labels, data numbers, and axis text formatted in crisp high-contrast white & light slate.\n"
             f"• File is ready for download and executive review."
         )
 
