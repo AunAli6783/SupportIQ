@@ -1,36 +1,50 @@
-# Phase 10: Live Internet Search Tool
+# Phase 10: Live Internet Search Tool (Serper.dev Google Search & News Engine)
 
-> **Phase Status:** Planned  
+> **Phase Status:** Completed (100% Verified)  
 > **Prerequisites:** Phase 05 & Phase 07 Completed (Tool-calling Agent & FastAPI functional)  
-> **Target Outcome:** Live real-time internet search tool (`search_internet`) equipped to the agent, enabling real-time market trend queries, external tech research, and live web search with strict anti-override policy rules.
+> **Target Outcome:** Live real-time internet search tool (`search_internet`) powered by Google Search / Google News (via Serper.dev) with DuckDuckGo fallback, enabling minute-by-minute freshness, breaking news retrieval, external tech research, and live web search with strict anti-override policy rules.
 
 ---
 
 ## 1. Objective
 
-Integrate a live web search capability (`search_internet`) into SupportIQ's tool ecosystem. The assistant uses internal NovaCart knowledge base documents for official company policies, but dynamically routes to live web search when users ask about current 2026 tech trends, latest industry news, or external market comparisons.
+Integrate a high-freshness live web search capability (`search_internet`) into SupportIQ's tool ecosystem. The assistant uses internal NovaCart knowledge base documents for official company policies, but dynamically routes to live web search when users ask about current tech trends, breaking industry news, or external market comparisons.
 
 ---
 
-## 2. Capability Architecture & Decision Routing
+## 2. Capability Architecture & Multi-Provider Routing
 
 ```
-                               Customer Query
-                                     │
-                                     ▼
-                          ┌─────────────────────┐
-                          │  Tool-Calling Agent │
-                          └──────────┬──────────┘
-                                     │
-         ┌───────────────────────────┼───────────────────────────┐
-         ▼                           ▼                           ▼
- ┌───────────────┐           ┌───────────────┐           ┌───────────────┐
- │   RAG Tool    │           │ Product Tool  │           │ Internet Tool │
- └───────┬───────┘           └───────┬───────┘           └───────┬───────┘
-         │                           │                           │
-         ▼                           ▼                           ▼
-  Chroma Vector DB              products.csv                 Live Web API
- (Official Policies)         (NovaCart Specs)          (Current 2026 Trends)
+                                Customer Query
+                                      │
+                                      ▼
+                           ┌─────────────────────┐
+                           │  Tool-Calling Agent │
+                           └──────────┬──────────┘
+                                      │
+         ┌────────────────────────────┼────────────────────────────┐
+         ▼                            ▼                            ▼
+ ┌───────────────┐            ┌───────────────┐            ┌───────────────┐
+ │   RAG Tool    │            │ Product Tool  │            │ Internet Tool │
+ └───────┬───────┘            └───────┬───────┘            └───────┬───────┘
+         │                            │                            │
+         ▼                            ▼                            ▼
+  Chroma Vector DB               products.csv              Serper Google API
+ (Official Policies)          (NovaCart Specs)          (Live News / Fallback)
+```
+
+### Search Provider Priority Architecture:
+
+```text
+               User asks a live / latest question
+                               │
+                               ▼
+                    search_internet Tool
+                               │
+       ┌───────────────────────┴───────────────────────┐
+       ▼ (Primary: SERPER_API_KEY)                     ▼ (Fallback: Free Engine)
+  Serper.dev (Google Search & News)                DuckDuckGo Search (`ddgs`)
+ (Minute-by-Minute Live Freshness)                 (Free Zero-Config Fallback)
 ```
 
 ### Routing Rules Matrix
@@ -39,65 +53,61 @@ Integrate a live web search capability (`search_internet`) into SupportIQ's tool
 | :--- | :--- | :--- |
 | *"What is NovaCart's refund policy?"* | `RAG Tool` (`search_knowledge_base`) | Internal official company policy |
 | *"Where is order NC-10003?"* | `Order Tool` (`get_order_status`) | Internal customer order database |
-| *"What are the latest laptop trends in 2026?"* | `Internet Tool` (`search_internet`) | Requires live external market data |
+| *"What are the latest tech news stories today in 2026?"* | `Internet Tool` (`search_internet`) | Requires real-time Google search data |
 | *"Compare our NovaGame X16 with popular gaming laptops."* | `Product Tool` + `Internet Tool` | Combines internal specs with external market research |
 
 ---
 
 ## 3. Implementation Components
 
-### Step 10.1: Free Internet Search Tool (`src/tools/internet_tool.py`)
+### Step 10.1: Live Search Engine (`src/tools/internet_tool.py`)
 
-Implement `search_internet` using a free search integration (e.g. DuckDuckGo Search `ddgs` or Tavily/Serper free tier wrapper) encapsulated behind a clean tool interface.
+Implements Serper.dev Google Search REST API with real-time news extraction, timestamps, and DuckDuckGo fallback:
 
 ```python
 import time
-from typing import Optional
+import json
+import httpx
+from typing import Optional, List, Dict, Any
 from langchain_core.tools import tool
+from src.config.settings import settings
 from src.utils.logger import logger
 
-@tool("search_internet")
-def search_internet(query: str) -> str:
-    """
-    Search the live internet for current information, market trends, and external products.
+def _search_serper_google(query: str, api_key: str) -> List[str]:
+    """Execute live Google Search via Serper.dev REST API with real-time freshness."""
+    url = "https://google.serper.dev/search"
+    headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
+    payload = {"q": query, "num": 4}
 
-    Use this tool ONLY when the user asks about:
-    - Latest 2026 tech trends or current news
-    - External market product comparisons
-    - General tech knowledge not available in NovaCart's internal knowledge base
-    
-    Do NOT use for official NovaCart shipping, return, warranty, or order status questions.
-    """
-    logger.info(f"Tool Exec: search_internet(query='{query}')")
-    
-    try:
-        # Provider Wrapper (DuckDuckGo / Tavily free search)
-        from duckduckgo_search import DDGS
-        
-        results = []
-        with DDGS() as ddgs:
-            search_results = list(ddgs.text(query, max_results=4))
-            for res in search_results:
-                title = res.get("title", "No Title")
-                snippet = res.get("body", "")
-                url = res.get("href", "")
-                results.append(f"• Title: {title}\n  Source URL: {url}\n  Summary: {snippet}")
+    response = httpx.post(url, headers=headers, json=payload, timeout=8.0)
+    response.raise_for_status()
+    data = response.json()
 
-        if not results:
-            return "No relevant live web search results found."
+    formatted_results = []
+    if "news" in data and data["news"]:
+        for item in data["news"][:4]:
+            title = item.get("title", "No Title")
+            link = item.get("link", "")
+            snippet = item.get("snippet", "")
+            date = item.get("date", "Recent")
+            formatted_results.append(f"• Title: {title} ({date})\n  Source URL: {link}\n  Summary: {snippet}")
+    elif "organic" in data and data["organic"]:
+        for item in data["organic"][:4]:
+            title = item.get("title", "No Title")
+            link = item.get("link", "")
+            snippet = item.get("snippet", "")
+            date = item.get("date", "")
+            date_str = f" [{date}]" if date else ""
+            formatted_results.append(f"• Title: {title}{date_str}\n  Source URL: {link}\n  Summary: {snippet}")
 
-        return "\n\n".join(results)
-
-    except Exception as e:
-        logger.error(f"Internet search execution error: {str(e)}")
-        return f"Internet Search Error: Unable to complete live web search ({str(e)})."
+    return formatted_results
 ```
 
 ---
 
 ### Step 10.2: System Prompt Policy Routing Guardrail (`src/agent/prompts.py`)
 
-Update `SYSTEM_PROMPT_TEMPLATE` with strict rules governing internet search usage:
+Strict rules governing internet search usage:
 
 ```text
 INTERNET SEARCH ROUTING & NON-OVERRIDE RULES:
@@ -108,24 +118,25 @@ INTERNET SEARCH ROUTING & NON-OVERRIDE RULES:
    c) Information is missing from NovaCart's internal knowledge base.
 3. CRITICAL NON-OVERRIDE RULE: Never allow general internet search results to override official NovaCart internal policies.
    - Example: If web search states typical return period is 14 days, but NovaCart policy states 30 days, you MUST answer 30 days.
-4. SOURCE ATTRIBUTION: Always cite source titles and URLs when incorporating live web search results.
+4. SOURCE ATTRIBUTION: Always cite source titles and URLs as clean clickable markdown links [Website Name](URL).
 ```
 
 ---
 
 ## 4. Verification & Test Plan
 
-Create `tests/test_internet_tool.py` to verify:
+Automated test suite in `tests/test_internet_tool.py` verifies:
 
-1. **Live Search Query Execution:** Querying current trends returns title and source URL attributions.
-2. **Policy Non-Override Assertion:** Asking about return policy ignores general web 14-day rules and enforces NovaCart's 30-day policy.
-3. **Error & Timeout Resilience:** Network timeouts fail gracefully with clear fallback messages.
+1. **Serper Google Search Execution:** Formats titles, real-time dates (e.g. "2 hours ago"), and URLs cleanly.
+2. **DuckDuckGo Fallback Execution:** Queries succeed even if Serper API key is absent.
+3. **Agent Routing Assertion:** Real-time trend queries invoke `search_internet` and categorize as `internet_search`.
 
 ---
 
-## 5. Phase 10 Checklist
+## 5. Phase 10 Completion Status
 
-- [ ] Implement `src/tools/internet_tool.py` containing `search_internet`.
-- [ ] Update `src/agent/prompts.py` with strict policy non-override rules.
-- [ ] Bind `search_internet` to `create_support_agent()` in `src/agent/builder.py`.
-- [ ] Execute `pytest tests/test_internet_tool.py` to confirm tool execution and policy routing.
+- [x] Implemented `src/tools/internet_tool.py` supporting Serper.dev Google Search with DuckDuckGo fallback.
+- [x] Added `SERPER_API_KEY` configuration in `src/config/settings.py` and `.env.example`.
+- [x] Updated `src/agent/prompts.py` with strict policy non-override rules.
+- [x] Bound `search_internet` to `create_support_agent()` in `src/agent/builder.py`.
+- [x] Executed `pytest tests/test_internet_tool.py` with 100% pass rate.

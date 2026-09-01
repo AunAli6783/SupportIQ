@@ -1,14 +1,19 @@
-# Phase 11: AI Sales Analytics & Presentation Generator
+# Phase 11: AI Sales Analytics & Presentation Generator (Native PowerPoint Charts & Topic Deep Dives)
 
-> **Phase Status:** Planned  
+> **Phase Status:** Completed (100% Verified)  
 > **Prerequisites:** Phase 04 & Phase 06 Completed (Data Tools & Pydantic Structured Outputs functional)  
-> **Target Outcome:** End-to-end sales analytics engine and PowerPoint presentation generator producing structured, executive-ready `.pptx` slide decks complete with charts and business insights.
+> **Target Outcome:** End-to-end sales analytics engine and PowerPoint presentation generator producing 16:9 widescreen, executive-grade `.pptx` slide decks complete with native Microsoft Office charts (Pie & Clustered Column), visual KPI scorecards, high-contrast typography, and topic/product-specific deep dive slides.
 
 ---
 
 ## 1. Objective
 
-Empower SupportIQ to process user requests like *"Create a presentation showing our product sales performance"*. The system computes precise sales metrics from historical `orders.csv` and `products.csv` data using a Python analytics engine, generates a structured slide plan via Pydantic, creates charts, and builds a downloadable `.pptx` presentation.
+Empower SupportIQ to process user requests like:
+* *"Create a PowerPoint presentation showing our product sales performance."*
+* *"Make a presentation specifically for the sales of our NovaBook Pro 14."*
+* *"Create slides analyzing all laptop sales."*
+
+The system computes precise sales metrics from historical `orders.csv` and `products.csv` using a Python analytics engine (Pandas), generates structured slide plans, embeds native editable PowerPoint charts, and provides instant browser downloads.
 
 ---
 
@@ -16,47 +21,49 @@ Empower SupportIQ to process user requests like *"Create a presentation showing 
 
 ```
                                 USER REQUEST
-                   "Create a sales performance presentation"
-                                     │
-                                     ▼
-                                   AGENT
-                                     │
-                           Presentation Tool
-                                     │
-         ┌───────────────────────────┴───────────────────────────┐
-         ▼                                                       ▼
-  orders.csv / DB                                         products.csv
-         │                                                       │
-         └───────────────────────────┬───────────────────────────┘
-                                     ▼
-                          Python Analytics Engine
-                    (Computes Revenue, Units, AOV)
-                                     │
-                                     ▼
-                         Structured Metrics Dict
-                                     │
-                                     ▼
-                            LLM (Pydantic Schema)
-                             PresentationPlan
-                                     │
-           ┌─────────────────────────┴─────────────────────────┐
-           ▼                                                   ▼
-     Native Charts                                         Slide Text
-     (Bar/Pie/Line)                                    (Insights & Bullets)
-           │                                                   │
-           └─────────────────────────┬─────────────────────────┘
-                                     ▼
-                        PPT Builder (python-pptx)
-                                     │
-                                     ▼
-                          Sales_Report.pptx File
+         "Create presentation for NovaBook Pro 14" or "Global Sales"
+                                      │
+                                      ▼
+                                    AGENT
+                                      │
+                         create_sales_presentation
+                                      │
+          ┌───────────────────────────┴───────────────────────────┐
+          ▼                                                       ▼
+   orders.csv (25 orders)                                  products.csv (16 models)
+          │                                                       │
+          └───────────────────────────┬───────────────────────────┘
+                                      ▼
+                           Python Analytics Engine
+                   (Revenue, Units, AOV, Product Filtering)
+                                      │
+                                      ▼
+                        Targeted Structured Analytics
+                                      │
+                                      ▼
+                         PPT Builder (python-pptx)
+                        • 16:9 Widescreen Canvas (13.333" x 7.5")
+                        • Executive Dark Palette (#0B0F19)
+                        • Visual KPI Scorecards
+                        • High-Contrast White Chart Fonts
+                        • Native Pie & Column Charts
+                                      │
+                                      ▼
+                       NovaCart_Report.pptx File
+                                      │
+                                      ▼
+                        FastAPI Download Endpoint
+                     (GET /api/v1/reports/download/{filename})
+                                      │
+                                      ▼
+                      Next.js Instant Download Button
 ```
 
 ### Architectural Separation Principle
 
 > ⚠️ **CRITICAL RULE:** Never send thousands of raw database rows directly into the LLM prompt.
-> * **Python Analytics Engine:** Handles all mathematical calculations, sums, grouping, and metrics.
-> * **LLM Agent:** Receives pre-computed clean statistics dictionary and handles business interpretation, slide narrative, executive insights, and chart recommendations.
+> * **Python Analytics Engine:** Handles all mathematical calculations, sums, grouping, and metrics in Python/Pandas.
+> * **Native Charts:** Charts are embedded as real Microsoft Office XML objects (`CategoryChartData`), ensuring they are interactive, responsive, and editable in Microsoft PowerPoint.
 
 ---
 
@@ -64,164 +71,81 @@ Empower SupportIQ to process user requests like *"Create a presentation showing 
 
 ### Step 11.1: Sales Analytics Engine (`src/tools/analytics_tool.py`)
 
-Calculate precise business metrics from `orders.csv` and `products.csv`:
+Computes precise business metrics with optional product/category filtering:
 
 ```python
-import pandas as pd
-from typing import Dict, Any
-from langchain_core.tools import tool
-from src.config.settings import settings
-from src.utils.logger import logger
-
 @tool("get_sales_statistics")
-def get_sales_statistics() -> Dict[str, Any]:
+def get_sales_statistics(filter_category: str = "", filter_product: str = "") -> Dict[str, Any]:
     """
-    Analyze NovaCart's historical order and product dataset to return structured sales statistics.
-    Includes total revenue, units sold per product, category breakdown, and AOV.
+    Analyze NovaCart's historical orders and product catalog dataset.
+    Can be filtered by category (e.g. 'Laptop') or specific product name (e.g. 'NovaBook Pro 14').
+    Computes total revenue, units sold, category breakdown, monthly trends, and AOV.
     """
-    logger.info("Tool Exec: get_sales_statistics()")
-    
-    orders_path = settings.KNOWLEDGE_BASE_DIR / "data" / "orders.csv"
-    products_path = settings.KNOWLEDGE_BASE_DIR / "data" / "products.csv"
-    
-    if not orders_path.exists() or not products_path.exists():
-        return {"error": "Sales dataset files missing."}
-
-    orders_df = pd.read_csv(orders_path)
-    products_df = pd.read_csv(products_path)
-
-    # Merge dataset
-    merged = pd.merge(orders_df, products_df, on="product_name", how="left")
-    
-    total_orders = len(orders_df)
-    total_revenue = merged["total_price"].sum()
-    total_units = merged["quantity"].sum()
-    avg_order_value = total_revenue / total_orders if total_orders > 0 else 0.0
-
-    # Sales by Product
-    product_sales = merged.groupby("product_name").agg(
-        units_sold=("quantity", "sum"),
-        total_revenue=("total_price", "sum")
-    ).reset_index().to_dict(orient="records")
-
-    # Sales by Category
-    category_sales = merged.groupby("category").agg(
-        units_sold=("quantity", "sum"),
-        total_revenue=("total_price", "sum")
-    ).reset_index().to_dict(orient="records")
-
-    return {
-        "total_orders": total_orders,
-        "total_revenue": round(total_revenue, 2),
-        "total_units_sold": total_units,
-        "average_order_value": round(avg_order_value, 2),
-        "product_breakdown": product_sales,
-        "category_breakdown": category_sales
-    }
 ```
 
 ---
 
-### Step 11.2: Pydantic Presentation Plan Schema (`src/schemas/presentation.py`)
+### Step 11.2: Topic-Aware PowerPoint Generator (`src/tools/ppt_tool.py`)
 
-Define strict slide deck structures:
+Builds 16:9 widescreen executive slide decks with native charts:
+
+* **Slide 1:** Executive Cover & 4 Visual KPI Scorecards (Revenue, Volume, Share %, Unit Price).
+* **Slide 2:** Hardware Specifications & Catalog Positioning Scorecards.
+* **Slide 3:** 2026 Monthly Sales Trajectory (Native Clustered Column Chart).
+* **Slide 4:** Category Peer Comparison & Benchmarking (Native Clustered Column Chart).
+* **Slide 5:** Order Delivery & Fulfillment Breakdown (Native Pie Chart).
+* **Slide 6:** Strategic Growth Action Matrix (3 Visual Strategy Cards).
 
 ```python
-from typing import List, Optional
-from pydantic import BaseModel, Field
+def _style_chart(chart, is_pie: bool = False):
+    """Format all chart data labels, axis text, and legends with high-contrast white styling."""
+    if chart.has_legend:
+        chart.legend.font.color.rgb = RGBColor(241, 245, 249)
+        chart.legend.font.size = Pt(10)
+        chart.legend.font.bold = True
 
-class Slide(BaseModel):
-    title: str = Field(description="Title of the presentation slide")
-    bullets: List[str] = Field(description="Executive bullet points and insights")
-    chart_type: Optional[str] = Field(
-        default=None, 
-        description="Suggested chart type: 'bar', 'pie', 'line', or None"
-    )
-
-class PresentationPlan(BaseModel):
-    title: str = Field(description="Main presentation title")
-    subtitle: str = Field(description="Executive subtitle")
-    slides: List[Slide] = Field(description="Ordered list of presentation slides")
+    if chart.plots:
+        plot = chart.plots[0]
+        plot.has_data_labels = True
+        data_labels = plot.data_labels
+        data_labels.font.color.rgb = RGBColor(255, 255, 255)
+        data_labels.font.size = Pt(10)
+        data_labels.font.bold = True
 ```
 
 ---
 
-### Step 11.3: PPTX Generation Engine (`src/tools/ppt_tool.py`)
+### Step 11.3: API Download Route & Frontend Download Action
 
-Build PowerPoint `.pptx` files using `python-pptx`:
-
-```python
-import os
-from pathlib import Path
-from pptx import Presentation
-from pptx.util import Inches, Pt
-from langchain_core.tools import tool
-from src.schemas.presentation import PresentationPlan
-from src.tools.analytics_tool import get_sales_statistics
-from src.config.settings import settings
-from src.utils.logger import logger
-
-@tool("create_sales_presentation")
-def create_sales_presentation(request: str) -> str:
-    """
-    Generate a formatted PowerPoint (.pptx) sales presentation file based on historical NovaCart data.
-    Returns absolute path to the generated presentation file.
-    """
-    logger.info(f"Tool Exec: create_sales_presentation(request='{request}')")
-    
-    # 1. Compute clean analytics statistics
-    stats = get_sales_statistics.invoke({})
-    
-    # 2. Build PPTX File
-    prs = Presentation()
-    
-    # Title Slide
-    title_slide_layout = prs.slide_layouts[0]
-    slide = prs.slides.add_slide(title_slide_layout)
-    title = slide.shapes.title
-    subtitle = slide.placeholders[1]
-    
-    title.text = "NovaCart Sales Performance Analysis"
-    subtitle.text = f"Total Revenue: PKR {stats.get('total_revenue', 0):,.2f} | Total Orders: {stats.get('total_orders', 0)}"
-
-    # Metrics Summary Slide
-    bullet_slide_layout = prs.slide_layouts[1]
-    slide2 = prs.slides.add_slide(bullet_slide_layout)
-    shapes = slide2.shapes
-    shapes.title.text = "Executive Summary & Revenue Breakdown"
-    
-    tf = shapes.placeholders[1].text_frame
-    tf.text = f"Total Units Sold: {stats.get('total_units_sold', 0)} units"
-
-    for prod in stats.get("product_breakdown", []):
-        p = tf.add_paragraph()
-        p.text = f"{prod['product_name']}: {prod['units_sold']} units sold (PKR {prod['total_revenue']:,.2f})"
-
-    output_dir = settings.BASE_DIR / "storage" / "reports"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "Sales_Performance_Report.pptx"
-    
-    prs.save(str(output_path))
-    logger.info(f"Successfully generated presentation at {output_path}")
-    return f"Presentation generated successfully. Download file path: {output_path}"
-```
+* **FastAPI Backend (`app/api/v1/endpoints/chat.py`):**
+  ```python
+  @router.get("/reports/download/{filename}")
+  async def download_report(filename: str):
+      file_path = settings.BASE_DIR / "storage" / "reports" / filename
+      return FileResponse(path=file_path, filename=filename, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation")
+  ```
+* **Next.js React Frontend (`frontend/app/page.tsx`):**
+  Renders an instant **"📥 Download PowerPoint (.pptx)"** action button that triggers automatic browser download.
 
 ---
 
 ## 4. Verification & Test Plan
 
-Create `tests/test_presentation.py` to verify:
+Automated test suite in `tests/test_presentation.py` verifies:
 
-1. **Analytics Calculation:** `get_sales_statistics()` calculates total orders, units sold, and category breakdowns matching `orders.csv`.
-2. **Presentation Generation:** `create_sales_presentation()` creates a valid `.pptx` file in `storage/reports/`.
+1. **Analytics Calculation:** `get_sales_statistics()` calculates total orders, units sold, and category breakdowns.
+2. **File Generation:** `create_sales_presentation()` creates a valid `.pptx` file (>10KB) with embedded charts.
 3. **Pydantic Validation:** `PresentationPlan` schema validates generated slide objects.
+4. **Agent Tool Routing:** Prompts to create presentations invoke `create_sales_presentation`.
 
 ---
 
-## 5. Phase 11 Checklist
+## 5. Phase 11 Completion Status
 
-- [ ] Implement `src/tools/analytics_tool.py` computing revenue and product statistics.
-- [ ] Implement `src/schemas/presentation.py` defining Pydantic slide schemas.
-- [ ] Implement `src/tools/ppt_tool.py` building `.pptx` files with `python-pptx`.
-- [ ] Bind tools to `create_support_agent()` in `src/agent/builder.py`.
-- [ ] Run `pytest tests/test_presentation.py` to verify end-to-end presentation generation.
+- [x] Implemented `src/tools/analytics_tool.py` supporting global and model-specific calculations.
+- [x] Implemented `src/schemas/presentation.py` defining Pydantic slide schemas.
+- [x] Implemented `src/tools/ppt_tool.py` with 16:9 widescreen layout, dark theme, and native charts.
+- [x] Added high-contrast pure white styling for all chart numbers, legends, and axis text.
+- [x] Added `GET /api/v1/reports/download/{filename}` FastAPI download endpoint.
+- [x] Bound tools to `create_support_agent()` in `src/agent/builder.py`.
+- [x] Executed `pytest tests/test_presentation.py` with 100% pass rate.
