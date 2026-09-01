@@ -408,15 +408,20 @@ export default function SupportIQChat() {
                       <div className="prose prose-invert prose-sm max-w-none text-slate-200 space-y-2">
                         <ReactMarkdown
                           components={{
-                            p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                            p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed text-slate-200">{children}</p>,
                             strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
-                            ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 my-2 text-slate-200">{children}</ul>,
-                            ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 my-2 text-slate-200">{children}</ol>,
-                            li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                            ul: ({ children }) => <ul className="list-disc pl-5 space-y-1.5 my-2 text-slate-200">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1.5 my-2 text-slate-200">{children}</ol>,
+                            li: ({ children }) => <li className="leading-relaxed text-slate-300">{children}</li>,
                             code: ({ children }) => <code className="px-1.5 py-0.5 bg-slate-800 border border-slate-700/80 rounded text-xs font-mono text-indigo-300">{children}</code>,
                             a: ({ href, children }) => (
-                              <a href={href} target="_blank" rel="noreferrer" className="text-indigo-400 underline hover:text-indigo-300 inline-flex items-center gap-0.5">
-                                {children} <ExternalLink className="w-3 h-3 inline" />
+                              <a 
+                                href={href} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-4 inline-flex items-center gap-1 hover:bg-cyan-950/40 px-1 py-0.5 rounded transition"
+                              >
+                                {children} <ExternalLink className="w-3 h-3 inline text-cyan-400" />
                               </a>
                             ),
                           }}
@@ -427,18 +432,47 @@ export default function SupportIQChat() {
                     )}
                   </div>
 
-                  {/* CITATIONS CARDS */}
+                  {/* CLICKABLE CITATION SOURCE CARDS */}
                   {msg.sources && msg.sources.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-1">
-                      {msg.sources.map((src, sIdx) => (
-                        <span
-                          key={sIdx}
-                          className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-slate-900/80 border border-slate-800 rounded-lg text-slate-300"
-                        >
-                          {src.category === "web_search" ? <Globe className="w-3.5 h-3.5 text-cyan-400" /> : <Layers className="w-3.5 h-3.5 text-indigo-400" />}
-                          <span className="font-mono text-slate-300 truncate max-w-xs">{src.source}</span>
-                        </span>
-                      ))}
+                      {msg.sources.map((src, sIdx) => {
+                        const isUrl = src.source.startsWith("http://") || src.source.startsWith("https://");
+                        let domain = src.source;
+                        if (isUrl) {
+                          try {
+                            domain = new URL(src.source).hostname.replace("www.", "");
+                          } catch {
+                            domain = src.source;
+                          }
+                        }
+
+                        return isUrl ? (
+                          <a
+                            key={sIdx}
+                            href={src.source}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-lg text-cyan-300 transition group shadow-sm"
+                            title={src.source}
+                          >
+                            <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                            <span className="font-medium text-slate-300 group-hover:text-cyan-200 truncate max-w-[200px]">
+                              {domain}
+                            </span>
+                            <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 shrink-0" />
+                          </a>
+                        ) : (
+                          <span
+                            key={sIdx}
+                            className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-slate-900/80 border border-slate-800 rounded-lg text-slate-300 shadow-sm"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            <span className="font-medium text-slate-300 truncate max-w-[200px]">
+                              {src.source.replace(".md", "").replace(/_/g, " ")}
+                            </span>
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
 
