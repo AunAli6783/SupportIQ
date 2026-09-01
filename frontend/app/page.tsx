@@ -320,7 +320,7 @@ export default function SupportIQChat() {
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <span className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-full font-mono text-[11px] text-slate-300">
-              Qwen 27B • Groq
+              GPT-OSS 120B • Groq
             </span>
           </div>
         </header>
