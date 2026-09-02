@@ -16,6 +16,38 @@ def _clean_text(text: str) -> str:
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
+def _search_tavily(query: str, api_key: str) -> List[str]:
+    """Execute live web search via Tavily AI Search API."""
+    url = "https://api.tavily.com/search"
+    query_lower = query.lower()
+    is_news = any(k in query_lower for k in ["news", "today", "latest", "breaking", "recent", "trend", "current", "2026"])
+    
+    payload = {
+        "api_key": api_key,
+        "query": query,
+        "search_depth": "advanced",
+        "max_results": 4,
+        "topic": "news" if is_news else "general"
+    }
+
+    response = httpx.post(url, json=payload, timeout=8.0)
+    response.raise_for_status()
+    data = response.json()
+
+    results = []
+    for item in data.get("results", [])[:4]:
+        title = _clean_text(item.get("title", "No Title"))
+        url_link = item.get("url", "")
+        content = _clean_text(item.get("content", ""))
+        published_date = _clean_text(item.get("published_date", "Recent"))
+        results.append(
+            f"• Headline: {title}\n"
+            f"  Published: {published_date} | Source: Tavily AI Index\n"
+            f"  Source URL: {url_link}\n"
+            f"  Summary: {content}"
+        )
+    return results
+
 def _search_serper_google(query: str, api_key: str) -> List[str]:
     """
     Execute comprehensive real-time Google Search via Serper.dev.
@@ -55,13 +87,12 @@ def _search_serper_google(query: str, api_key: str) -> List[str]:
     # 2. Query Google Organic Search with Recent Time Filtering (Past Week / Month)
     try:
         search_url = "https://google.serper.dev/search"
-        payload_search = {"q": query, "num": 5, "tbs": "qdr:m"} # Prioritize past month / recent updates
+        payload_search = {"q": query, "num": 5, "tbs": "qdr:m"}
         response_search = httpx.post(search_url, headers=headers, json=payload_search, timeout=8.0)
         
         if response_search.status_code == 200:
             data = response_search.json()
             
-            # Check organic items
             for item in data.get("organic", []):
                 link = item.get("link", "")
                 if link and link not in seen_urls:
@@ -78,12 +109,11 @@ def _search_serper_google(query: str, api_key: str) -> List[str]:
     except Exception as e:
         logger.warning(f"Google Organic Search failed ({str(e)}).")
 
-    # If we have results, return the top 4 most relevant & recent entries
     return formatted_results[:4]
 
 
 def _search_duckduckgo_fallback(query: str) -> List[str]:
-    """Fallback search using DuckDuckGo when Serper API key is not configured or fails."""
+    """Fallback search using DuckDuckGo when API keys are not configured or fail."""
     try:
         from ddgs import DDGS
     except ImportError:
@@ -106,8 +136,7 @@ def search_internet(query: str = "") -> str:
     Search the live internet for the most recent and real-time information, breaking news, market developments,
     tech trends, and external product comparisons.
     
-    Always searches Google News and Google Search (via Serper.dev) prioritizing recent developing updates 
-    (hours, days, or weeks ago), with DuckDuckGo fallback.
+    Supports Google Search & Google News (via Serper.dev), Tavily AI Search (via Tavily API), and DuckDuckGo fallback.
 
     Use this tool ONLY when the user asks about:
     - Recent news, breaking tech events, developing stories, or live 2026 market developments
@@ -120,8 +149,18 @@ def search_internet(query: str = "") -> str:
     
     if not query or not query.strip():
         return "No search query provided."
-    
-    # 1. Prefer Google Search / Google News via Serper.dev if API Key is configured
+
+    # 1. Check Tavily if configured
+    if settings.TAVILY_API_KEY and settings.TAVILY_API_KEY.strip():
+        try:
+            logger.info("Executing search via Tavily AI Search API.")
+            results = _search_tavily(query, settings.TAVILY_API_KEY.strip())
+            if results:
+                return "\n\n".join(results)
+        except Exception as e:
+            logger.warning(f"Tavily search failed ({str(e)}). Trying Serper.")
+
+    # 2. Check Google Search / Google News via Serper.dev if API Key is configured
     if settings.SERPER_API_KEY and settings.SERPER_API_KEY.strip():
         try:
             logger.info("Executing dual Google News & Search via Serper.dev engine.")
@@ -131,7 +170,7 @@ def search_internet(query: str = "") -> str:
         except Exception as e:
             logger.warning(f"Serper Google search failed ({str(e)}). Falling back to DuckDuckGo.")
 
-    # 2. Fallback to DuckDuckGo search
+    # 3. Fallback to DuckDuckGo search
     try:
         logger.info("Executing search via DuckDuckGo engine fallback.")
         results = _search_duckduckgo_fallback(query)

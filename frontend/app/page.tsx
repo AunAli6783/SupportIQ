@@ -38,15 +38,23 @@ export default function SupportIQChat() {
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [selectedEngine, setSelectedEngine] = useState("google:gemini-3.6-flash");
+  const [selectedSearchEngine, setSelectedSearchEngine] = useState("serper");
 
   useEffect(() => {
     const savedEngine = localStorage.getItem("supportiq_llm_engine");
     if (savedEngine) setSelectedEngine(savedEngine);
+    const savedSearch = localStorage.getItem("supportiq_search_engine");
+    if (savedSearch) setSelectedSearchEngine(savedSearch);
   }, []);
 
   const handleEngineChange = (engine: string) => {
     setSelectedEngine(engine);
     localStorage.setItem("supportiq_llm_engine", engine);
+  };
+
+  const handleSearchEngineChange = (engine: string) => {
+    setSelectedSearchEngine(engine);
+    localStorage.setItem("supportiq_search_engine", engine);
   };
 
   const API_URL = "http://localhost:8000/api/v1";
@@ -181,6 +189,7 @@ export default function SupportIQChat() {
           customer_id: customerId,
           provider: prov,
           model: mdl,
+          search_engine: selectedSearchEngine,
         }),
       });
 
@@ -331,8 +340,9 @@ export default function SupportIQChat() {
               {activeSessionTitle}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 shadow-sm">
+          <div className="flex items-center gap-2">
+            {/* AI Model Switcher */}
+            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 shadow-sm">
               <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <select
                 value={selectedEngine}
@@ -340,13 +350,33 @@ export default function SupportIQChat() {
                 className="bg-transparent text-slate-200 text-xs font-medium focus:outline-none cursor-pointer pr-1"
               >
                 <option value="google:gemini-3.6-flash" className="bg-slate-900 text-slate-200">
-                  ✨ Google Gemini 3.6 Flash (Recommended)
+                  ✨ Gemini 3.6 Flash
                 </option>
                 <option value="groq:openai/gpt-oss-120b" className="bg-slate-900 text-slate-200">
-                  ⚡ Groq GPT-OSS 120B
+                  ⚡ GPT-OSS 120B
                 </option>
                 <option value="groq:qwen/qwen3.6-27b" className="bg-slate-900 text-slate-200">
-                  🦙 Groq Qwen 27B
+                  🦙 Qwen 27B
+                </option>
+              </select>
+            </div>
+
+            {/* Search Scraper Switcher */}
+            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 shadow-sm">
+              <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <select
+                value={selectedSearchEngine}
+                onChange={(e) => handleSearchEngineChange(e.target.value)}
+                className="bg-transparent text-slate-200 text-xs font-medium focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="serper" className="bg-slate-900 text-slate-200">
+                  🌐 Google (Serper)
+                </option>
+                <option value="tavily" className="bg-slate-900 text-slate-200">
+                  🦅 Tavily AI
+                </option>
+                <option value="duckduckgo" className="bg-slate-900 text-slate-200">
+                  🦆 DuckDuckGo
                 </option>
               </select>
             </div>

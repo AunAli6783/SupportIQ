@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from src.tools.internet_tool import search_internet, _search_serper_google
+from src.tools.internet_tool import search_internet, _search_serper_google, _search_tavily
 from src.agent.builder import create_support_agent
 from src.schemas.parser import ResponseParser
 
@@ -9,7 +9,7 @@ def test_search_internet_tool_execution():
     res = search_internet.invoke({"query": "gaming laptop trends 2026"})
     assert isinstance(res, str)
     assert len(res) > 20
-    assert "Title:" in res or "Source URL:" in res or "No relevant" in res
+    assert "Title:" in res or "Headline:" in res or "Source URL:" in res or "No relevant" in res
 
 def test_serper_google_search_parsing():
     """Verify Serper.dev Google search parsing formats titles, dates, and URLs correctly."""
@@ -45,6 +45,32 @@ def test_serper_google_search_parsing():
         assert "Published: 2 hours ago" in results[0]
         assert "Source URL: https://example.com/news/1" in results[0]
         assert "Title: Best Laptops in 2026" in results[1]
+
+def test_tavily_search_parsing():
+    """Verify Tavily AI search parsing formats titles, dates, and URLs correctly."""
+    mock_tavily_response = {
+        "results": [
+            {
+                "title": "AI Silicon Breakthroughs in 2026",
+                "url": "https://example.com/tavily/1",
+                "content": "Next-gen processors deliver 100 TOPS on device.",
+                "published_date": "1 day ago"
+            }
+        ]
+    }
+
+    with patch("httpx.post") as mock_post:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_tavily_response
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        results = _search_tavily("AI processors", "fake_tavily_key")
+        assert len(results) == 1
+        assert "Headline: AI Silicon Breakthroughs in 2026" in results[0]
+        assert "Published: 1 day ago" in results[0]
+        assert "Source URL: https://example.com/tavily/1" in results[0]
 
 def test_agent_internet_search_routing():
     """Verify tool agent routes current trend queries to search_internet tool."""
