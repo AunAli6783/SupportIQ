@@ -2,20 +2,32 @@ import time
 import json
 import re
 import httpx
+from contextvars import ContextVar
 from typing import Optional, List, Dict, Any
 from langchain_core.tools import tool
 
 from src.config.settings import settings
 from src.utils.logger import logger
 
+# ContextVar for active search engine per request
+_active_search_engine: ContextVar[str] = ContextVar("active_search_engine", default="serper")
+
+def set_active_search_engine(engine: str):
+    """Set active search engine for current request context ('serper', 'tavily', or 'duckduckgo')."""
+    if engine:
+        _active_search_engine.set(engine.lower().strip())
+        logger.info(f"Active search engine set to: {engine.lower().strip()}")
+
+def get_active_search_engine() -> str:
+    """Get active search engine for current request context."""
+    return _active_search_engine.get()
+
 def _clean_text(text: str) -> str:
     """Sanitize zero-width characters, excessive whitespace, and raw markdown headings."""
     if not text:
         return ""
     cleaned = re.sub(r'[\u200b\u200c\u200d\ufeff\u00ad]', '', text)
-    # Remove markdown header syntax
     cleaned = re.sub(r'#{1,6}\s*', '', cleaned)
-    # Remove excessive whitespace
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
@@ -42,7 +54,6 @@ def _search_tavily(query: str, api_key: str) -> List[str]:
         title = _clean_text(item.get("title", "No Title"))
         url_link = item.get("url", "")
         raw_content = _clean_text(item.get("content", ""))
-        # Truncate overly long content to 350 characters for crisp summary
         content = raw_content[:350] + "..." if len(raw_content) > 350 else raw_content
         published_date = _clean_text(item.get("published_date", "Recent"))
         results.append(
@@ -56,15 +67,14 @@ def _search_tavily(query: str, api_key: str) -> List[str]:
 def _search_serper_google(query: str, api_key: str) -> List[str]:
     """
     Execute comprehensive real-time Google Search via Serper.dev.
-    Queries both Google News (for latest developing updates, 2-4 days ago, hours ago)
-    and Google Organic Search, merging results to guarantee maximum freshness and accuracy.
+    Queries both Google News and Google Organic Search.
     """
     formatted_results = []
     seen_urls = set()
 
     headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
 
-    # 1. ALWAYS Query Google News First (Captures 1-hour, 1-day, 2-day, 4-day developing stories)
+    # 1. Query Google News First
     try:
         news_url = "https://google.serper.dev/news"
         payload_news = {"q": query, "num": 5}
@@ -89,7 +99,7 @@ def _search_serper_google(query: str, api_key: str) -> List[str]:
     except Exception as e:
         logger.warning(f"Google News query failed ({str(e)}). Proceeding with organic search.")
 
-    # 2. Query Google Organic Search with Recent Time Filtering (Past Week / Month)
+    # 2. Query Google Organic Search with Recent Time Filtering
     try:
         search_url = "https://google.serper.dev/search"
         payload_search = {"q": query, "num": 5, "tbs": "qdr:m"}
@@ -97,7 +107,6 @@ def _search_serper_google(query: str, api_key: str) -> List[str]:
         
         if response_search.status_code == 200:
             data = response_search.json()
-            
             for item in data.get("organic", []):
                 link = item.get("link", "")
                 if link and link not in seen_urls:
@@ -118,7 +127,7 @@ def _search_serper_google(query: str, api_key: str) -> List[str]:
 
 
 def _search_duckduckgo_fallback(query: str) -> List[str]:
-    """Fallback search using DuckDuckGo when API keys are not configured or fail."""
+    """Fallback search using DuckDuckGo."""
     try:
         from ddgs import DDGS
     except ImportError:
@@ -138,42 +147,42 @@ def _search_duckduckgo_fallback(query: str) -> List[str]:
 @tool("search_internet")
 def search_internet(query: str = "") -> str:
     """
-    Search the live internet for the most recent and real-time information, breaking news, market developments,
+    Search the live internet for recent information, breaking news, market developments,
     tech trends, and external product comparisons.
     
-    Supports Google Search & Google News (via Serper.dev), Tavily AI Search (via Tavily API), and DuckDuckGo fallback.
-
-    Use this tool ONLY when the user asks about:
-    - Recent news, breaking tech events, developing stories, or live 2026 market developments
-    - External market product comparisons (e.g. comparing NovaCart items with competitor brands)
-    - General external information not available in NovaCart's internal knowledge base
-    
-    Do NOT use this tool for official NovaCart shipping, return, refund, warranty, or order status questions.
+    Dynamically routes to user-selected search provider (Google Serper, Tavily AI, or DuckDuckGo).
     """
-    logger.info(f"Tool Exec: search_internet(query='{query}')")
-    
     if not query or not query.strip():
         return "No search query provided."
 
-    # 1. Check Tavily if configured
-    if settings.TAVILY_API_KEY and settings.TAVILY_API_KEY.strip():
-        try:
-            logger.info("Executing search via Tavily AI Search API.")
-            results = _search_tavily(query, settings.TAVILY_API_KEY.strip())
-            if results:
-                return "\n\n".join(results)
-        except Exception as e:
-            logger.warning(f"Tavily search failed ({str(e)}). Trying Serper.")
+    engine = get_active_search_engine()
+    logger.info(f"Tool Exec: search_internet(query='{query}') [Selected Engine: {engine}]")
 
-    # 2. Check Google Search / Google News via Serper.dev if API Key is configured
-    if settings.SERPER_API_KEY and settings.SERPER_API_KEY.strip():
-        try:
-            logger.info("Executing dual Google News & Search via Serper.dev engine.")
-            results = _search_serper_google(query, settings.SERPER_API_KEY.strip())
-            if results:
-                return "\n\n".join(results)
-        except Exception as e:
-            logger.warning(f"Serper Google search failed ({str(e)}). Falling back to DuckDuckGo.")
+    # 1. Route to Tavily if selected
+    if engine == "tavily":
+        if settings.TAVILY_API_KEY and settings.TAVILY_API_KEY.strip():
+            try:
+                logger.info("Executing search via Tavily AI Search API.")
+                results = _search_tavily(query, settings.TAVILY_API_KEY.strip())
+                if results:
+                    return "\n\n".join(results)
+            except Exception as e:
+                logger.warning(f"Tavily search failed ({str(e)}). Trying fallback.")
+        else:
+            logger.warning("Tavily API key not found in .env. Falling back to Google Serper.")
+
+    # 2. Route to Serper Google Search if selected (or default)
+    if engine in ["serper", "google"]:
+        if settings.SERPER_API_KEY and settings.SERPER_API_KEY.strip():
+            try:
+                logger.info("Executing dual Google News & Search via Serper.dev engine.")
+                results = _search_serper_google(query, settings.SERPER_API_KEY.strip())
+                if results:
+                    return "\n\n".join(results)
+            except Exception as e:
+                logger.warning(f"Serper Google search failed ({str(e)}). Falling back.")
+        else:
+            logger.warning("Serper API key not found in .env.")
 
     # 3. Fallback to DuckDuckGo search
     try:

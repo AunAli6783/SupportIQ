@@ -4,10 +4,11 @@ from fastapi import APIRouter, HTTPException, Depends
 from sse_starlette.sse import EventSourceResponse
 
 from src.schemas.response import ChatRequestPayload, SupportResponse
-from src.schemas.parser import ResponseParser
+from src.schemas.parser import ResponseParser, _clean_raw_output
 from src.agent.builder import create_support_agent
 from src.agent.security import SecurityGuard
 from src.memory.session_manager import SessionMemoryManager
+from src.tools.internet_tool import set_active_search_engine
 from src.utils.logger import logger
 
 router = APIRouter()
@@ -21,6 +22,10 @@ async def chat_endpoint(payload: ChatRequestPayload):
     is_safe, sec_msg = SecurityGuard.inspect_incoming_prompt(payload.message)
     if not is_safe:
         return ResponseParser.parse_agent_result(sec_msg)
+
+    # Set active search engine for this request
+    if payload.search_engine:
+        set_active_search_engine(payload.search_engine)
 
     # 2. Retrieve history & append user message
     history = SessionMemoryManager.get_messages(payload.conversation_id)
@@ -37,9 +42,10 @@ async def chat_endpoint(payload: ChatRequestPayload):
         
         raw_output = response_dict.get("output", "")
         intermediate_steps = response_dict.get("intermediate_steps", [])
+        clean_text = _clean_raw_output(raw_output)
         
-        # Save AI response to memory
-        SessionMemoryManager.add_ai_message(payload.conversation_id, str(raw_output))
+        # Save clean AI response to memory
+        SessionMemoryManager.add_ai_message(payload.conversation_id, clean_text)
         
         # 4. Parse into structured output
         return ResponseParser.parse_agent_result(raw_output, intermediate_steps)

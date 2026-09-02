@@ -353,11 +353,11 @@ export default function SupportIQChat() {
                 <option value="google:gemini-3.6-flash" className="bg-slate-900 text-slate-200">
                   ✨ Gemini 3.6 Flash
                 </option>
-                <option value="groq:openai/gpt-oss-120b" className="bg-slate-900 text-slate-200">
-                  ⚡ GPT-OSS 120B
+                <option value="groq:openai/gpt-oss-20b" className="bg-slate-900 text-slate-200">
+                  ⚡ GPT-OSS 20B (Fast)
                 </option>
-                <option value="groq:qwen/qwen3.6-27b" className="bg-slate-900 text-slate-200">
-                  🦙 Qwen 27B
+                <option value="groq:openai/gpt-oss-120b" className="bg-slate-900 text-slate-200">
+                  🧠 GPT-OSS 120B
                 </option>
               </select>
             </div>
