@@ -12,48 +12,34 @@ def _clean_text(text: str) -> str:
     """Sanitize zero-width characters and excessive whitespace."""
     if not text:
         return ""
-    # Remove zero-width spaces, soft hyphens, and non-printable characters
     cleaned = re.sub(r'[\u200b\u200c\u200d\ufeff\u00ad]', '', text)
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
 def _search_serper_google(query: str, api_key: str) -> List[str]:
     """
-    Execute real-time live Google Search or Google News via Serper.dev REST API.
-    Uses dedicated Google News endpoint and strict recency time-filters (tbs=qdr:d / tbs=qdr:w)
-    to ensure minute-by-minute and hour-by-hour freshness.
+    Execute comprehensive real-time Google Search via Serper.dev.
+    Queries both Google News (for latest developing updates, 2-4 days ago, hours ago)
+    and Google Organic Search, merging results to guarantee maximum freshness and accuracy.
     """
-    query_lower = query.lower()
-    is_news_intent = any(k in query_lower for k in [
-        "news", "today", "latest", "breaking", "recent", "trend", "now", "current", "update", "yesterday", "2026"
-    ])
-
     formatted_results = []
+    seen_urls = set()
 
-    # 1. First Attempt: Dedicated Google News Endpoint (Strict 24-Hour / 7-Day Recency)
-    if is_news_intent:
-        try:
-            news_url = "https://google.serper.dev/news"
-            headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
-            # Use 'qdr:d' (past 24h) if asking about 'today'/'now'/'breaking', else 'qdr:w' (past week)
-            time_filter = "qdr:d" if any(k in query_lower for k in ["today", "now", "breaking", "latest news", "minute", "hour"]) else "qdr:w"
-            payload = {"q": query, "num": 5, "tbs": time_filter}
+    headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
 
-            response = httpx.post(news_url, headers=headers, json=payload, timeout=8.0)
-            if response.status_code == 200:
-                data = response.json()
-                news_items = data.get("news", [])
-                
-                # If strict 24h filter returned empty, retry without tbs filter
-                if not news_items and time_filter == "qdr:d":
-                    payload_broad = {"q": query, "num": 5}
-                    broad_resp = httpx.post(news_url, headers=headers, json=payload_broad, timeout=8.0)
-                    if broad_resp.status_code == 200:
-                        news_items = broad_resp.json().get("news", [])
-
-                for item in news_items[:4]:
+    # 1. ALWAYS Query Google News First (Captures 1-hour, 1-day, 2-day, 4-day developing stories)
+    try:
+        news_url = "https://google.serper.dev/news"
+        payload_news = {"q": query, "num": 5}
+        response_news = httpx.post(news_url, headers=headers, json=payload_news, timeout=8.0)
+        
+        if response_news.status_code == 200:
+            news_items = response_news.json().get("news", [])
+            for item in news_items:
+                link = item.get("link", "")
+                if link and link not in seen_urls:
+                    seen_urls.add(link)
                     title = _clean_text(item.get("title", "No Title"))
-                    link = item.get("link", "")
                     publisher = _clean_text(item.get("source", "Google News"))
                     date = _clean_text(item.get("date", "Recent"))
                     snippet = _clean_text(item.get("snippet", ""))
@@ -63,53 +49,37 @@ def _search_serper_google(query: str, api_key: str) -> List[str]:
                         f"  Source URL: {link}\n"
                         f"  Summary: {snippet}"
                     )
-        except Exception as e:
-            logger.warning(f"Serper Google News query failed ({str(e)}). Trying organic Google search.")
+    except Exception as e:
+        logger.warning(f"Google News query failed ({str(e)}). Proceeding with organic search.")
 
-    # 2. Second Attempt / Fallback: Google Organic Search with Recency Filtering
-    if not formatted_results:
-        try:
-            search_url = "https://google.serper.dev/search"
-            headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
-            payload = {"q": query, "num": 4, "tbs": "qdr:w" if is_news_intent else None}
-            # Remove None values
-            payload = {k: v for k, v in payload.items() if v is not None}
+    # 2. Query Google Organic Search with Recent Time Filtering (Past Week / Month)
+    try:
+        search_url = "https://google.serper.dev/search"
+        payload_search = {"q": query, "num": 5, "tbs": "qdr:m"} # Prioritize past month / recent updates
+        response_search = httpx.post(search_url, headers=headers, json=payload_search, timeout=8.0)
+        
+        if response_search.status_code == 200:
+            data = response_search.json()
+            
+            # Check organic items
+            for item in data.get("organic", []):
+                link = item.get("link", "")
+                if link and link not in seen_urls:
+                    seen_urls.add(link)
+                    title = _clean_text(item.get("title", "No Title"))
+                    snippet = _clean_text(item.get("snippet", ""))
+                    date = _clean_text(item.get("date", ""))
+                    date_str = f"Published: {date} | " if date else ""
+                    formatted_results.append(
+                        f"• Title: {title}\n"
+                        f"  {date_str}Source URL: {link}\n"
+                        f"  Summary: {snippet}"
+                    )
+    except Exception as e:
+        logger.warning(f"Google Organic Search failed ({str(e)}).")
 
-            response = httpx.post(search_url, headers=headers, json=payload, timeout=8.0)
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Check for news section in search results
-                if "news" in data and data["news"]:
-                    for item in data["news"][:4]:
-                        title = _clean_text(item.get("title", "No Title"))
-                        link = item.get("link", "")
-                        snippet = _clean_text(item.get("snippet", ""))
-                        date = _clean_text(item.get("date", "Recent"))
-                        publisher = _clean_text(item.get("source", "News"))
-                        formatted_results.append(
-                            f"• Headline: {title}\n"
-                            f"  Published: {date} | Publisher: {publisher}\n"
-                            f"  Source URL: {link}\n"
-                            f"  Summary: {snippet}"
-                        )
-                # Check organic results
-                elif "organic" in data and data["organic"]:
-                    for item in data["organic"][:4]:
-                        title = _clean_text(item.get("title", "No Title"))
-                        link = item.get("link", "")
-                        snippet = _clean_text(item.get("snippet", ""))
-                        date = _clean_text(item.get("date", ""))
-                        date_str = f"Published: {date} | " if date else ""
-                        formatted_results.append(
-                            f"• Title: {title}\n"
-                            f"  {date_str}Source URL: {link}\n"
-                            f"  Summary: {snippet}"
-                        )
-        except Exception as e:
-            logger.warning(f"Serper Organic Google Search failed: {str(e)}")
-
-    return formatted_results
+    # If we have results, return the top 4 most relevant & recent entries
+    return formatted_results[:4]
 
 
 def _search_duckduckgo_fallback(query: str) -> List[str]:
@@ -121,7 +91,6 @@ def _search_duckduckgo_fallback(query: str) -> List[str]:
     
     results = []
     with DDGS() as ddgs:
-        # Request recent results
         search_results = list(ddgs.text(query, max_results=4))
         for res in search_results:
             title = _clean_text(res.get("title", "No Title"))
@@ -132,16 +101,16 @@ def _search_duckduckgo_fallback(query: str) -> List[str]:
 
 
 @tool("search_internet")
-def search_internet(query: str) -> str:
+def search_internet(query: str = "") -> str:
     """
     Search the live internet for the most recent and real-time information, breaking news, market developments,
     tech trends, and external product comparisons.
     
-    Uses Google News & Google Search API (via Serper.dev) with strict time-filtering (past 24 hours / past week)
-    to guarantee real-time freshness, with DuckDuckGo fallback.
+    Always searches Google News and Google Search (via Serper.dev) prioritizing recent developing updates 
+    (hours, days, or weeks ago), with DuckDuckGo fallback.
 
     Use this tool ONLY when the user asks about:
-    - Today's latest news, breaking tech events, or live 2026 market developments
+    - Recent news, breaking tech events, developing stories, or live 2026 market developments
     - External market product comparisons (e.g. comparing NovaCart items with competitor brands)
     - General external information not available in NovaCart's internal knowledge base
     
@@ -149,10 +118,13 @@ def search_internet(query: str) -> str:
     """
     logger.info(f"Tool Exec: search_internet(query='{query}')")
     
+    if not query or not query.strip():
+        return "No search query provided."
+    
     # 1. Prefer Google Search / Google News via Serper.dev if API Key is configured
     if settings.SERPER_API_KEY and settings.SERPER_API_KEY.strip():
         try:
-            logger.info("Executing Google search via Serper.dev API engine with recency filters.")
+            logger.info("Executing dual Google News & Search via Serper.dev engine.")
             results = _search_serper_google(query, settings.SERPER_API_KEY.strip())
             if results:
                 return "\n\n".join(results)

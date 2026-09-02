@@ -40,10 +40,11 @@ def test_serper_google_search_parsing():
         mock_post.return_value = mock_response
 
         results = _search_serper_google("latest laptops", "fake_serper_key")
-        assert len(results) == 1
+        assert len(results) == 2
         assert "Headline: Tech Titans Announce Next-Gen AI Laptops" in results[0]
         assert "Published: 2 hours ago" in results[0]
         assert "Source URL: https://example.com/news/1" in results[0]
+        assert "Title: Best Laptops in 2026" in results[1]
 
 def test_agent_internet_search_routing():
     """Verify tool agent routes current trend queries to search_internet tool."""
