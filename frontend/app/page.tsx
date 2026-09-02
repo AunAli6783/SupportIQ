@@ -39,6 +39,7 @@ export default function SupportIQChat() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [selectedEngine, setSelectedEngine] = useState("google:gemini-3.6-flash");
   const [selectedSearchEngine, setSelectedSearchEngine] = useState("serper");
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const savedEngine = localStorage.getItem("supportiq_llm_engine");
