@@ -36,3 +36,4 @@ class ChatRequestPayload(BaseModel):
     customer_id: Optional[str] = Field(default=None, description="Optional customer identity token.")
     provider: Optional[str] = Field(default=None, description="Optional LLM provider ('google', 'groq', 'ollama').")
     model: Optional[str] = Field(default=None, description="Optional model name (e.g. 'gemini-3.6-flash', 'openai/gpt-oss-120b').")
+    search_engine: Optional[str] = Field(default=None, description="Optional search engine ('serper', 'tavily', 'duckduckgo').")
