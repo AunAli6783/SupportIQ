@@ -376,6 +376,9 @@ export default function SupportIQChat() {
                 <option value="tavily" className="bg-slate-900 text-slate-200">
                   🦅 Tavily AI
                 </option>
+                <option value="gdelt" className="bg-slate-900 text-slate-200">
+                  📡 GDELT (Global News DB)
+                </option>
                 <option value="duckduckgo" className="bg-slate-900 text-slate-200">
                   🦆 DuckDuckGo
                 </option>

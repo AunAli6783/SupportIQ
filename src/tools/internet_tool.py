@@ -1,6 +1,7 @@
 import time
 import json
 import re
+import urllib.parse
 import httpx
 from urllib.parse import urlparse
 from contextvars import ContextVar
@@ -14,7 +15,7 @@ from src.utils.logger import logger
 _active_search_engine: ContextVar[str] = ContextVar("active_search_engine", default="serper")
 
 def set_active_search_engine(engine: str):
-    """Set active search engine for current request context ('serper', 'tavily', or 'duckduckgo')."""
+    """Set active search engine for current request context ('serper', 'tavily', 'gdelt', or 'duckduckgo')."""
     if engine:
         _active_search_engine.set(engine.lower().strip())
         logger.info(f"Active search engine set to: {engine.lower().strip()}")
@@ -39,6 +40,42 @@ def _get_domain(url: str) -> str:
         return domain.replace("www.", "")
     except Exception:
         return ""
+
+def _search_gdelt(query: str) -> List[str]:
+    """Execute free global news query via GDELT Project Doc 2.0 API."""
+    cleaned_q = re.sub(r'[^a-zA-Z0-9\s]', '', query).strip()
+    encoded_query = urllib.parse.quote_plus(cleaned_q)
+    url = f"http://api.gdeltproject.org/api/v2/doc/doc?query={encoded_query}+sourcelang:eng&mode=ArtList&maxrecords=12&format=json&timespan=24h&sort=DateDesc"
+    
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    response = httpx.get(url, headers=headers, timeout=7.0)
+    response.raise_for_status()
+    data = response.json()
+
+    results = []
+    seen_domains: Set[str] = set()
+
+    for item in data.get("articles", []):
+        url_link = item.get("url", "")
+        domain = item.get("domain", "") or _get_domain(url_link)
+        
+        if domain and domain in seen_domains:
+            continue
+        if domain:
+            seen_domains.add(domain)
+
+        title = _clean_text(item.get("title", "No Title"))
+        seendate = item.get("seendate", "")
+        date_str = f"Seen: {seendate[:8]} UTC" if len(seendate) >= 8 else "Recent"
+        results.append(
+            f"• Headline: {title}\n"
+            f"  Published: {date_str} | Publisher: {domain or 'GDELT Global News'}\n"
+            f"  Source URL: {url_link}\n"
+            f"  Summary: Breaking global report indexed by the GDELT Project monitoring global news feeds."
+        )
+        if len(results) >= 10:
+            break
+    return results
 
 def _search_tavily(query: str, api_key: str) -> List[str]:
     """
@@ -195,7 +232,7 @@ def search_internet(query: str = "") -> str:
     Search the live internet for recent information, breaking news, market developments,
     tech trends, and external product comparisons.
     
-    Dynamically routes to user-selected search provider (Google Serper, Tavily AI, or DuckDuckGo)
+    Dynamically routes to user-selected search provider (Google Serper, Tavily AI, GDELT Project, or DuckDuckGo)
     with strict recency filtering, publisher domain diversity, and up to 10 rich information chunks.
     """
     if not query or not query.strip():
@@ -204,7 +241,17 @@ def search_internet(query: str = "") -> str:
     engine = get_active_search_engine()
     logger.info(f"Tool Exec: search_internet(query='{query}') [Selected Engine: {engine}]")
 
-    # 1. Route to Tavily if selected
+    # 1. Route to GDELT Project if selected (100% Free Public News Database)
+    if engine == "gdelt":
+        try:
+            logger.info("Executing search via GDELT Project Public News Database API.")
+            results = _search_gdelt(query)
+            if results:
+                return "\n\n".join(results)
+        except Exception as e:
+            logger.warning(f"GDELT Project search failed or timed out ({str(e)}). Falling back to Google Serper.")
+
+    # 2. Route to Tavily if selected
     if engine == "tavily":
         if settings.TAVILY_API_KEY and settings.TAVILY_API_KEY.strip():
             try:
@@ -217,8 +264,8 @@ def search_internet(query: str = "") -> str:
         else:
             logger.warning("Tavily API key not found in .env. Falling back to Google Serper.")
 
-    # 2. Route to Serper Google Search if selected (or default)
-    if engine in ["serper", "google"]:
+    # 3. Route to Serper Google Search if selected (or default)
+    if engine in ["serper", "google", "gdelt"]:
         if settings.SERPER_API_KEY and settings.SERPER_API_KEY.strip():
             try:
                 logger.info("Executing dual Google News & Search via Serper.dev engine (up to 10 chunks).")
@@ -230,7 +277,7 @@ def search_internet(query: str = "") -> str:
         else:
             logger.warning("Serper API key not found in .env.")
 
-    # 3. Fallback to DuckDuckGo search
+    # 4. Fallback to DuckDuckGo search
     try:
         logger.info("Executing search via DuckDuckGo engine fallback (up to 10 chunks).")
         results = _search_duckduckgo_fallback(query)

@@ -72,6 +72,33 @@ def test_tavily_search_parsing():
         assert "Published: 1 day ago" in results[0]
         assert "Source URL: https://example.com/tavily/1" in results[0]
 
+def test_gdelt_search_parsing():
+    """Verify GDELT Project search parsing formats titles, seen dates, and URLs correctly."""
+    from src.tools.internet_tool import _search_gdelt
+    mock_gdelt_response = {
+        "articles": [
+            {
+                "title": "Global Tech Summit Inaugurated",
+                "url": "https://example.com/gdelt/1",
+                "domain": "technews.org",
+                "seendate": "20260902T080000Z"
+            }
+        ]
+    }
+
+    with patch("httpx.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_gdelt_response
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        results = _search_gdelt("global tech summit")
+        assert len(results) == 1
+        assert "Headline: Global Tech Summit Inaugurated" in results[0]
+        assert "Publisher: technews.org" in results[0]
+        assert "Source URL: https://example.com/gdelt/1" in results[0]
+
 def test_agent_internet_search_routing():
     """Verify tool agent routes current trend queries to search_internet tool."""
     agent = create_support_agent()
