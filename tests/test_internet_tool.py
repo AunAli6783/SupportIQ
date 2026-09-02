@@ -34,13 +34,15 @@ def test_serper_google_search_parsing():
 
     with patch("httpx.post") as mock_post:
         mock_response = MagicMock()
+        mock_response.status_code = 200
         mock_response.json.return_value = mock_serper_response
         mock_response.raise_for_status.return_value = None
         mock_post.return_value = mock_response
 
         results = _search_serper_google("latest laptops", "fake_serper_key")
         assert len(results) == 1
-        assert "Tech Titans Announce Next-Gen AI Laptops (2 hours ago)" in results[0]
+        assert "Headline: Tech Titans Announce Next-Gen AI Laptops" in results[0]
+        assert "Published: 2 hours ago" in results[0]
         assert "Source URL: https://example.com/news/1" in results[0]
 
 def test_agent_internet_search_routing():
