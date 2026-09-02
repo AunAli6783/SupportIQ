@@ -41,18 +41,18 @@ def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = No
             model=target_model if "gemini" in target_model else "gemini-3.6-flash",
             api_key=settings.GOOGLE_API_KEY,
             google_api_key=settings.GOOGLE_API_KEY,
-            temperature=0.0
+            temperature=0.35
         )
     elif target_provider == "groq":
         return ChatGroq(
-            model=target_model if target_model and "gemini" not in target_model else "openai/gpt-oss-120b",
+            model=target_model if target_model and "gemini" not in target_model else "openai/gpt-oss-20b",
             groq_api_key=settings.GROQ_API_KEY,
-            temperature=0.0
+            temperature=0.35
         )
     elif target_provider == "ollama":
         return ChatOllama(
             model=target_model or "llama3.2:1b",
-            temperature=0.0
+            temperature=0.35
         )
     else:
         # Default fallback to Google Gemini Free Tier
@@ -60,7 +60,7 @@ def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = No
             model="gemini-3.6-flash",
             api_key=settings.GOOGLE_API_KEY,
             google_api_key=settings.GOOGLE_API_KEY,
-            temperature=0.0
+            temperature=0.35
         )
 
 def create_support_agent(provider: Optional[str] = None, model_name: Optional[str] = None) -> AgentExecutor:

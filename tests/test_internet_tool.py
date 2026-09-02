@@ -25,7 +25,7 @@ def test_serper_google_search_parsing():
         "organic": [
             {
                 "title": "Best Laptops in 2026",
-                "link": "https://example.com/laptops",
+                "link": "https://techradar.com/laptops",
                 "snippet": "Reviewing top models.",
                 "date": "Yesterday"
             }
