@@ -37,7 +37,17 @@ export default function SupportIQChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [selectedEngine, setSelectedEngine] = useState("google:gemini-3.6-flash");
+
+  useEffect(() => {
+    const savedEngine = localStorage.getItem("supportiq_llm_engine");
+    if (savedEngine) setSelectedEngine(savedEngine);
+  }, []);
+
+  const handleEngineChange = (engine: string) => {
+    setSelectedEngine(engine);
+    localStorage.setItem("supportiq_llm_engine", engine);
+  };
 
   const API_URL = "http://localhost:8000/api/v1";
 
@@ -161,6 +171,7 @@ export default function SupportIQChat() {
     }
 
     try {
+      const [prov, mdl] = selectedEngine.split(":");
       const response = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -168,6 +179,8 @@ export default function SupportIQChat() {
           message: query,
           conversation_id: conversationId,
           customer_id: customerId,
+          provider: prov,
+          model: mdl,
         }),
       });
 
@@ -318,10 +331,25 @@ export default function SupportIQChat() {
               {activeSessionTitle}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-full font-mono text-[11px] text-slate-300">
-              GPT-OSS 120B • Groq
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 shadow-sm">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <select
+                value={selectedEngine}
+                onChange={(e) => handleEngineChange(e.target.value)}
+                className="bg-transparent text-slate-200 text-xs font-medium focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="google:gemini-3.6-flash" className="bg-slate-900 text-slate-200">
+                  ✨ Google Gemini 3.6 Flash (Recommended)
+                </option>
+                <option value="groq:openai/gpt-oss-120b" className="bg-slate-900 text-slate-200">
+                  ⚡ Groq GPT-OSS 120B
+                </option>
+                <option value="groq:qwen/qwen3.6-27b" className="bg-slate-900 text-slate-200">
+                  🦙 Groq Qwen 27B
+                </option>
+              </select>
+            </div>
           </div>
         </header>
 

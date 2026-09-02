@@ -34,3 +34,5 @@ class ChatRequestPayload(BaseModel):
     message: str = Field(description="Customer question or instruction.")
     conversation_id: str = Field(description="Unique conversation session identifier.")
     customer_id: Optional[str] = Field(default=None, description="Optional customer identity token.")
+    provider: Optional[str] = Field(default=None, description="Optional LLM provider ('google', 'groq', 'ollama').")
+    model: Optional[str] = Field(default=None, description="Optional model name (e.g. 'gemini-3.6-flash', 'openai/gpt-oss-120b').")

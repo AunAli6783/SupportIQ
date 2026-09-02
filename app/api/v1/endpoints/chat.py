@@ -27,7 +27,7 @@ async def chat_endpoint(payload: ChatRequestPayload):
     SessionMemoryManager.add_user_message(payload.conversation_id, payload.message)
 
     # 3. Execute Agent
-    agent = create_support_agent()
+    agent = create_support_agent(provider=payload.provider, model_name=payload.model)
     try:
         response_dict = agent.invoke({
             "input": payload.message,

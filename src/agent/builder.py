@@ -1,4 +1,5 @@
-from typing import List, Any
+import os
+from typing import List, Any, Optional
 try:
     from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 except ImportError:
@@ -20,37 +21,37 @@ from src.tools.analytics_tool import get_sales_statistics
 from src.tools.ppt_tool import create_sales_presentation
 from src.utils.logger import logger
 
-def get_llm_model():
+def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = None):
     """
     Factory to instantiate configured 100% Free / Zero-Cost LLM provider.
     - Google Gemini (Free API Key via Google AI Studio, 0 MB disk footprint)
     - Groq (Free API Key via Groq Cloud, 0 MB disk footprint)
     - Ollama (Local micro model < 1.3 GB disk footprint)
     """
-    import os
     if settings.GOOGLE_API_KEY:
         os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY
     if settings.GROQ_API_KEY:
         os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
 
-    provider = settings.LLM_PROVIDER.lower()
+    target_provider = (provider or settings.LLM_PROVIDER).lower()
+    target_model = model_name or settings.DEFAULT_MODEL_NAME
 
-    if provider == "google":
+    if target_provider == "google":
         return ChatGoogleGenerativeAI(
-            model=settings.DEFAULT_MODEL_NAME or "gemini-3.6-flash",
+            model=target_model if "gemini" in target_model else "gemini-3.6-flash",
             api_key=settings.GOOGLE_API_KEY,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.0
         )
-    elif provider == "groq":
+    elif target_provider == "groq":
         return ChatGroq(
-            model=settings.DEFAULT_MODEL_NAME or "llama-3.1-8b-instant",
+            model=target_model if target_model and "gemini" not in target_model else "openai/gpt-oss-120b",
             groq_api_key=settings.GROQ_API_KEY,
             temperature=0.0
         )
-    elif provider == "ollama":
+    elif target_provider == "ollama":
         return ChatOllama(
-            model=settings.DEFAULT_MODEL_NAME or "llama3.2:1b",
+            model=target_model or "llama3.2:1b",
             temperature=0.0
         )
     else:
@@ -62,8 +63,8 @@ def get_llm_model():
             temperature=0.0
         )
 
-def create_support_agent() -> AgentExecutor:
-    """Build and return configured Tool Calling Agent Executor."""
+def create_support_agent(provider: Optional[str] = None, model_name: Optional[str] = None) -> AgentExecutor:
+    """Build and return configured Tool Calling Agent Executor with loop prevention."""
     tools = [
         get_order_status,
         search_products,
@@ -75,7 +76,7 @@ def create_support_agent() -> AgentExecutor:
         create_sales_presentation
     ]
 
-    llm = get_llm_model()
+    llm = get_llm_model(provider=provider, model_name=model_name)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", SYSTEM_PROMPT_TEMPLATE),
@@ -90,10 +91,11 @@ def create_support_agent() -> AgentExecutor:
         agent=agent,
         tools=tools,
         verbose=True,
-        max_iterations=5,
+        max_iterations=4,
+        early_stopping_method="generate",
         handle_parsing_errors=True,
         return_intermediate_steps=True
     )
 
-    logger.info("Successfully constructed SupportIQ Tool Calling Agent Executor.")
+    logger.info(f"Successfully constructed SupportIQ Tool Calling Agent ({provider or settings.LLM_PROVIDER} : {model_name or settings.DEFAULT_MODEL_NAME}).")
     return agent_executor
