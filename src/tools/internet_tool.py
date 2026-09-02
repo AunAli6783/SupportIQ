@@ -42,23 +42,23 @@ def _get_domain(url: str) -> str:
 
 def _search_tavily(query: str, api_key: str) -> List[str]:
     """
-    Execute live web search via Tavily AI Search API with recency prompts and domain diversity.
+    Execute live web search via Tavily AI Search API with recency prompts and up to 10 diverse publisher chunks.
     """
     url = "https://api.tavily.com/search"
     query_lower = query.lower()
-    is_news = any(k in query_lower for k in ["news", "today", "latest", "breaking", "recent", "trend", "current", "2026", "update"])
+    is_news = any(k in query_lower for k in ["news", "today", "latest", "breaking", "recent", "trend", "current", "2026", "update", "global", "world"])
     
     payload: Dict[str, Any] = {
         "api_key": api_key,
         "query": query,
         "search_depth": "advanced",
-        "max_results": 6,
+        "max_results": 15,
         "topic": "news" if is_news else "general",
         "time_range": "w" if is_news else None
     }
     payload = {k: v for k, v in payload.items() if v is not None}
 
-    response = httpx.post(url, json=payload, timeout=8.0)
+    response = httpx.post(url, json=payload, timeout=9.0)
     response.raise_for_status()
     data = response.json()
 
@@ -69,7 +69,7 @@ def _search_tavily(query: str, api_key: str) -> List[str]:
         url_link = item.get("url", "")
         domain = _get_domain(url_link)
         
-        # Enforce source diversity (maximum 1 article per domain)
+        # Enforce publisher domain diversity
         if domain and domain in seen_domains:
             continue
         if domain:
@@ -81,11 +81,11 @@ def _search_tavily(query: str, api_key: str) -> List[str]:
         published_date = _clean_text(item.get("published_date", "Recent"))
         results.append(
             f"• Headline: {title}\n"
-            f"  Published: {published_date} | Source: {domain or 'Tavily AI'}\n"
+            f"  Published: {published_date} | Publisher: {domain or 'Tavily AI'}\n"
             f"  Source URL: {url_link}\n"
             f"  Summary: {content}"
         )
-        if len(results) >= 4:
+        if len(results) >= 10:
             break
 
     return results
@@ -93,7 +93,7 @@ def _search_tavily(query: str, api_key: str) -> List[str]:
 def _search_serper_google(query: str, api_key: str) -> List[str]:
     """
     Execute comprehensive real-time Google Search via Serper.dev.
-    Queries both Google News and Google Organic Search with strict recency filtering and domain diversity.
+    Queries both Google News and Google Organic Search, returning up to 10 distinct publisher resources.
     """
     formatted_results = []
     seen_urls: Set[str] = set()
@@ -101,11 +101,11 @@ def _search_serper_google(query: str, api_key: str) -> List[str]:
 
     headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
 
-    # 1. Query Google News First (Captures hour-by-hour & day-by-day breaking news)
+    # 1. Query Google News (Captures hour-by-hour & day-by-day breaking news)
     try:
         news_url = "https://google.serper.dev/news"
-        payload_news = {"q": query, "num": 6, "tbs": "qdr:w"}
-        response_news = httpx.post(news_url, headers=headers, json=payload_news, timeout=8.0)
+        payload_news = {"q": query, "num": 10, "tbs": "qdr:w"}
+        response_news = httpx.post(news_url, headers=headers, json=payload_news, timeout=9.0)
         
         if response_news.status_code == 200:
             news_items = response_news.json().get("news", [])
@@ -125,14 +125,16 @@ def _search_serper_google(query: str, api_key: str) -> List[str]:
                         f"  Source URL: {link}\n"
                         f"  Summary: {snippet}"
                     )
+                if len(formatted_results) >= 7:
+                    break
     except Exception as e:
         logger.warning(f"Google News query failed ({str(e)}). Proceeding with organic search.")
 
-    # 2. Query Google Organic Search with Recent Time Filtering (Past Week / Month)
+    # 2. Query Google Organic Search with Recent Time Filtering
     try:
         search_url = "https://google.serper.dev/search"
-        payload_search = {"q": query, "num": 6, "tbs": "qdr:w"}
-        response_search = httpx.post(search_url, headers=headers, json=payload_search, timeout=8.0)
+        payload_search = {"q": query, "num": 10, "tbs": "qdr:w"}
+        response_search = httpx.post(search_url, headers=headers, json=payload_search, timeout=9.0)
         
         if response_search.status_code == 200:
             data = response_search.json()
@@ -151,14 +153,16 @@ def _search_serper_google(query: str, api_key: str) -> List[str]:
                         f"  {date_str}Source URL: {link}\n"
                         f"  Summary: {snippet}"
                     )
+                if len(formatted_results) >= 10:
+                    break
     except Exception as e:
         logger.warning(f"Google Organic Search failed ({str(e)}).")
 
-    return formatted_results[:4]
+    return formatted_results[:10]
 
 
 def _search_duckduckgo_fallback(query: str) -> List[str]:
-    """Fallback search using DuckDuckGo with weekly recency filter and domain diversity."""
+    """Fallback search using DuckDuckGo with weekly recency filter and domain diversity up to 10 chunks."""
     try:
         from ddgs import DDGS
     except ImportError:
@@ -168,7 +172,7 @@ def _search_duckduckgo_fallback(query: str) -> List[str]:
     seen_domains: Set[str] = set()
 
     with DDGS() as ddgs:
-        search_results = list(ddgs.text(query, max_results=6, timelimit="w"))
+        search_results = list(ddgs.text(query, max_results=12, timelimit="w"))
         for res in search_results:
             url = res.get("href", "")
             domain = _get_domain(url)
@@ -180,7 +184,7 @@ def _search_duckduckgo_fallback(query: str) -> List[str]:
             title = _clean_text(res.get("title", "No Title"))
             snippet = _clean_text(res.get("body", ""))
             results.append(f"• Title: {title}\n  Source URL: {url}\n  Summary: {snippet}")
-            if len(results) >= 4:
+            if len(results) >= 10:
                 break
     return results
 
@@ -192,7 +196,7 @@ def search_internet(query: str = "") -> str:
     tech trends, and external product comparisons.
     
     Dynamically routes to user-selected search provider (Google Serper, Tavily AI, or DuckDuckGo)
-    with strict recency filtering and publisher domain diversity.
+    with strict recency filtering, publisher domain diversity, and up to 10 rich information chunks.
     """
     if not query or not query.strip():
         return "No search query provided."
@@ -204,7 +208,7 @@ def search_internet(query: str = "") -> str:
     if engine == "tavily":
         if settings.TAVILY_API_KEY and settings.TAVILY_API_KEY.strip():
             try:
-                logger.info("Executing search via Tavily AI Search API with recency filters.")
+                logger.info("Executing search via Tavily AI Search API with recency filters (up to 10 chunks).")
                 results = _search_tavily(query, settings.TAVILY_API_KEY.strip())
                 if results:
                     return "\n\n".join(results)
@@ -217,7 +221,7 @@ def search_internet(query: str = "") -> str:
     if engine in ["serper", "google"]:
         if settings.SERPER_API_KEY and settings.SERPER_API_KEY.strip():
             try:
-                logger.info("Executing dual Google News & Search via Serper.dev engine with recency filters.")
+                logger.info("Executing dual Google News & Search via Serper.dev engine (up to 10 chunks).")
                 results = _search_serper_google(query, settings.SERPER_API_KEY.strip())
                 if results:
                     return "\n\n".join(results)
@@ -228,7 +232,7 @@ def search_internet(query: str = "") -> str:
 
     # 3. Fallback to DuckDuckGo search
     try:
-        logger.info("Executing search via DuckDuckGo engine fallback.")
+        logger.info("Executing search via DuckDuckGo engine fallback (up to 10 chunks).")
         results = _search_duckduckgo_fallback(query)
         if not results:
             return "No relevant live web search results found."
