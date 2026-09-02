@@ -9,10 +9,13 @@ from src.config.settings import settings
 from src.utils.logger import logger
 
 def _clean_text(text: str) -> str:
-    """Sanitize zero-width characters and excessive whitespace."""
+    """Sanitize zero-width characters, excessive whitespace, and raw markdown headings."""
     if not text:
         return ""
     cleaned = re.sub(r'[\u200b\u200c\u200d\ufeff\u00ad]', '', text)
+    # Remove markdown header syntax
+    cleaned = re.sub(r'#{1,6}\s*', '', cleaned)
+    # Remove excessive whitespace
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
@@ -38,7 +41,9 @@ def _search_tavily(query: str, api_key: str) -> List[str]:
     for item in data.get("results", [])[:4]:
         title = _clean_text(item.get("title", "No Title"))
         url_link = item.get("url", "")
-        content = _clean_text(item.get("content", ""))
+        raw_content = _clean_text(item.get("content", ""))
+        # Truncate overly long content to 350 characters for crisp summary
+        content = raw_content[:350] + "..." if len(raw_content) > 350 else raw_content
         published_date = _clean_text(item.get("published_date", "Recent"))
         results.append(
             f"• Headline: {title}\n"

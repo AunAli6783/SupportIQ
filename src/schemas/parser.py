@@ -1,7 +1,53 @@
+import ast
+import json
 import re
 from typing import List, Dict, Any, Optional
 from src.schemas.response import SupportResponse, SourceCitation
 from src.utils.logger import logger
+
+def _clean_raw_output(raw_output: Any) -> str:
+    """
+    Extract human-readable text cleanly from raw string, dict, or LangChain Gemini list of chunks.
+    Strips raw Python dicts, signature hashes, and internal metadata artifacts.
+    """
+    if not raw_output:
+        return ""
+    
+    # 1. If raw_output is already a list (common with ChatGoogleGenerativeAI chunks)
+    if isinstance(raw_output, list):
+        extracted = []
+        for item in raw_output:
+            if isinstance(item, dict) and "text" in item:
+                extracted.append(str(item["text"]))
+            elif isinstance(item, str):
+                extracted.append(item)
+            else:
+                extracted.append(str(item))
+        return "\n".join(extracted).strip()
+
+    text = str(raw_output).strip()
+
+    # 2. If text starts with '[{' and represents a stringified list of dicts
+    if (text.startswith("[{") and text.endswith("}]")) or (text.startswith("{") and text.endswith("}")):
+        try:
+            parsed = ast.literal_eval(text)
+            if isinstance(parsed, list):
+                extracted = [str(item["text"]) for item in parsed if isinstance(item, dict) and "text" in item]
+                if extracted:
+                    return "\n".join(extracted).strip()
+            elif isinstance(parsed, dict) and "text" in parsed:
+                return str(parsed["text"]).strip()
+        except Exception:
+            pass
+
+    # 3. Regex fallback to extract text if stringified dictionary with signature
+    if "'extras': {'signature':" in text or '"extras": {"signature":' in text:
+        text_match = re.search(r"['\"]text['\"]\s*:\s*(?:\"(.*?)\"|'(.*?)'),\s*['\"](?:index|extras)", text, re.DOTALL)
+        if text_match:
+            matched = text_match.group(1) or text_match.group(2) or ""
+            return matched.replace("\\n", "\n").replace('\\"', '"').replace("\\'", "'").strip()
+
+    return text
 
 class ResponseParser:
     @staticmethod
@@ -17,11 +63,8 @@ class ResponseParser:
         sources = []
         confidence = 0.95
 
-        # Format output string cleanly whether raw_output is a string or list of dicts
-        if isinstance(raw_output, list):
-            answer_text = "\n".join([item.get("text", str(item)) for item in raw_output if isinstance(item, dict)])
-        else:
-            answer_text = str(raw_output)
+        # Format output string cleanly
+        answer_text = _clean_raw_output(raw_output)
 
         # Inspect intermediate tool calls to categorize response & extract metadata
         if intermediate_steps:
@@ -49,7 +92,7 @@ class ResponseParser:
                 elif tool_name == "search_internet":
                     category = "internet_search"
                     # Extract URLs from internet search results
-                    url_matches = re.findall(r"Source URL:\s*(https?://[^\s]+)", str(observation))
+                    url_matches = re.findall(r"Source URL:\s*(https?://[^\s\)]+)", str(observation))
                     for url in set(url_matches):
                         sources.append(SourceCitation(source=url, category="web_search"))
                 elif tool_name == "create_sales_presentation":
