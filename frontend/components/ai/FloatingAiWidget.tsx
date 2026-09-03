@@ -19,7 +19,11 @@ import {
   FileText,
   ShieldCheck,
   Zap,
-  ShoppingBag
+  ShoppingBag,
+  Package,
+  CreditCard,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
@@ -38,7 +42,7 @@ interface Message {
 
 export default function FloatingAiWidget() {
   const pathname = usePathname();
-  const { items, totalAmount, itemCount } = useCart();
+  const { items, totalAmount, itemCount, addToCart } = useCart();
   const { user } = useAuth();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -58,6 +62,41 @@ export default function FloatingAiWidget() {
   const viewingProductId = pathname.startsWith('/products/') ? pathname.replace('/products/', '') : null;
   const viewingProduct = viewingProductId ? PRODUCTS.find((p) => p.id === viewingProductId) : null;
 
+  // DYNAMIC CONTEXTUAL QUICK ACTION CHIPS
+  const getContextualChips = () => {
+    if (viewingProduct) {
+      return [
+        `Does ${viewingProduct.name.split(' ')[0]} have an official warranty?`,
+        `Is this currently in stock?`,
+        `Calculate 10% student discount on this`,
+        `What are the full hardware specs for this?`
+      ];
+    }
+    if (pathname === '/cart' || pathname === '/checkout') {
+      return [
+        'Do I qualify for Free Express Shipping?',
+        'Can I pay via Cash on Delivery (COD)?',
+        'What is your 30-day return policy?',
+        'Estimated delivery time to Islamabad / Karachi?'
+      ];
+    }
+    if (pathname === '/orders') {
+      return [
+        'Where is my latest order NC-10002?',
+        'How do I cancel an unfulfilled order?',
+        'How do I initiate a replacement RMA request?',
+        'Generate executive presentation on sales (.pptx)'
+      ];
+    }
+    // Default Homepage Chips
+    return [
+      'Where is my order?',
+      'Best laptops for AI development 2026',
+      'What is your 30-day return policy?',
+      'Compare iPhone 16 Pro Max vs Galaxy S25 Ultra'
+    ];
+  };
+
   useEffect(() => {
     const savedLlm = localStorage.getItem('novacart_llm_engine');
     if (savedLlm) setSelectedEngine(savedLlm);
@@ -70,14 +109,9 @@ export default function FloatingAiWidget() {
         {
           id: 'welcome_1',
           sender: 'assistant',
-          text: `👋 Hi ${user?.name || 'there'}! I'm **Nova AI**, your live shopping and customer care assistant for NovaCart. How can I help you today?`,
+          text: `👋 Hi ${user?.name || 'there'}! I'm **Nova AI**, your live shopping and customer care assistant. I'm connected to the live catalog and order database. How can I help you?`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          suggestedActions: [
-            'Where is my order?',
-            'What is your 30-day return policy?',
-            'Best laptops for AI development 2026',
-            'Compare iPhone 16 Pro Max vs Galaxy S25 Ultra'
-          ]
+          suggestedActions: getContextualChips()
         }
       ]);
     }
@@ -132,13 +166,16 @@ export default function FloatingAiWidget() {
           provider: prov,
           model: mdl,
           search_engine: selectedSearchEngine,
-          // Transmit live page & website context
+          // Transmit complete live page & website context
           page_context: {
             current_path: pathname,
             viewing_product_id: viewingProduct?.id,
             viewing_product_name: viewingProduct?.name,
+            viewing_product_price: viewingProduct?.price,
             cart_item_count: itemCount,
             cart_total_pkr: totalAmount,
+            customer_name: user?.name,
+            customer_city: user?.city,
           }
         }),
       });
@@ -155,7 +192,7 @@ export default function FloatingAiWidget() {
         category: data.category,
         confidence: data.confidence,
         sources: data.sources || [],
-        suggestedActions: data.suggested_actions || [],
+        suggestedActions: data.suggested_actions?.length ? data.suggested_actions : getContextualChips().slice(0, 2),
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
@@ -166,7 +203,7 @@ export default function FloatingAiWidget() {
         {
           id: `msg_err_${Date.now()}`,
           sender: 'assistant',
-          text: `⚠️ **Connection Error:** Unable to reach SupportIQ backend on \`${API_URL}\`. Please ensure the FastAPI server is running on port 8000.`,
+          text: `⚠️ **Connection Notice:** Unable to reach SupportIQ backend on \`${API_URL}\`. Please ensure the FastAPI server is running (\`uvicorn app.main:app --port 8000\`).`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -183,14 +220,16 @@ export default function FloatingAiWidget() {
           {/* Subtle speech bubble teaser */}
           <div className="hidden sm:flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-slate-800 text-xs font-bold py-2 px-3.5 rounded-2xl shadow-xl border border-sky-100 animate-in fade-in slide-in-from-right-3 duration-300">
             <span className="w-2 h-2 rounded-full bg-[#008ECC] animate-ping" />
-            <span>Need shopping help? Chat with me!</span>
+            <span>
+              {viewingProduct ? `Ask about ${viewingProduct.name.split(' ')[0]}!` : 'Need shopping help? Chat with me!'}
+            </span>
             <div className="absolute right-[-6px] top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[6px] border-l-white/95" />
           </div>
 
           <button
             onClick={() => setIsOpen(true)}
-            aria-label="Open Nova AI Chatbot"
-            className="relative group p-1.5 rounded-full bg-gradient-to-tr from-[#008ECC] via-sky-500 to-indigo-600 shadow-2xl shadow-sky-500/40 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white"
+            aria-label="Open Nova AI Assistant"
+            className="relative group p-1.5 rounded-full bg-gradient-to-tr from-[#008ECC] via-sky-500 to-[#212844] shadow-2xl shadow-sky-500/40 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white"
           >
             {/* Pulsing ring indicator */}
             <span className="absolute -inset-1 rounded-full bg-sky-400/40 animate-ping pointer-events-none" />
@@ -212,7 +251,7 @@ export default function FloatingAiWidget() {
 
       {/* 2. EXPANDABLE CHAT DRAWER */}
       {isOpen && (
-        <div className="fixed bottom-4 right-4 z-50 w-[94vw] sm:w-[420px] md:w-[460px] h-[600px] max-h-[90vh] bg-slate-950 text-slate-100 rounded-3xl shadow-2xl border border-slate-800 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-4 right-4 z-50 w-[94vw] sm:w-[440px] md:w-[480px] h-[640px] max-h-[90vh] bg-slate-950 text-slate-100 rounded-3xl shadow-2xl border border-slate-800 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
           
           {/* HEADER */}
           <div className="p-3.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
@@ -229,7 +268,11 @@ export default function FloatingAiWidget() {
                   Nova AI Assistant
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Live Store & Database Agent</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                  <span>Context-Aware</span>
+                  <span>•</span>
+                  <span className="text-sky-400 font-medium">{user ? user.name : 'Guest'}</span>
+                </p>
               </div>
             </div>
 
@@ -285,20 +328,35 @@ export default function FloatingAiWidget() {
           </div>
 
           {/* ACTIVE WEBSITE CONTEXT INDICATOR */}
-          {viewingProduct && (
-            <div className="bg-[#008ECC]/10 border-b border-[#008ECC]/20 px-3 py-1.5 flex items-center justify-between text-[11px] text-sky-300">
-              <span className="truncate flex items-center gap-1">
-                <ShoppingBag className="w-3 h-3 text-[#008ECC]" />
-                Viewing: <strong className="text-white">{viewingProduct.name}</strong>
-              </span>
+          {viewingProduct ? (
+            <div className="bg-[#008ECC]/15 border-b border-[#008ECC]/30 px-3 py-2 flex items-center justify-between text-[11px] text-sky-300">
+              <div className="truncate flex items-center gap-1.5">
+                <ShoppingBag className="w-3.5 h-3.5 text-[#008ECC] shrink-0" />
+                <span className="truncate">
+                  Viewing: <strong className="text-white">{viewingProduct.name}</strong> ({viewingProduct.price.toLocaleString()} PKR)
+                </span>
+              </div>
               <button
-                onClick={() => handleSend(`Tell me about the warranty and return policy for ${viewingProduct.name}`)}
-                className="underline hover:text-white text-[10px] shrink-0"
+                onClick={() => handleSend(`Does this have an official warranty and is it in stock?`)}
+                className="underline hover:text-white text-[10px] shrink-0 font-bold ml-2"
               >
                 Ask About This
               </button>
             </div>
-          )}
+          ) : itemCount > 0 ? (
+            <div className="bg-slate-900 border-b border-slate-800 px-3 py-1.5 flex items-center justify-between text-[11px] text-slate-300">
+              <span className="flex items-center gap-1">
+                <Package className="w-3 h-3 text-emerald-400" />
+                Cart: <strong>{itemCount} items ({totalAmount.toLocaleString()} PKR)</strong>
+              </span>
+              <button
+                onClick={() => handleSend('Do I qualify for free express shipping with my current cart?')}
+                className="underline hover:text-sky-300 text-[10px]"
+              >
+                Check Shipping
+              </button>
+            </div>
+          ) : null}
 
           {/* MESSAGES SCROLL AREA */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -308,10 +366,10 @@ export default function FloatingAiWidget() {
                 className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed relative group ${
+                  className={`max-w-[88%] rounded-2xl p-3 text-xs leading-relaxed relative group ${
                     msg.sender === 'user'
-                      ? 'bg-[#008ECC] text-white rounded-tr-none'
-                      : 'bg-slate-900 text-slate-200 border border-slate-800 rounded-tl-none'
+                      ? 'bg-gradient-to-r from-[#008ECC] to-sky-600 text-white rounded-tr-none shadow-md shadow-sky-500/20'
+                      : 'bg-slate-900 text-slate-200 border border-slate-800 rounded-tl-none shadow-sm'
                   }`}
                 >
                   <ReactMarkdown
@@ -363,12 +421,12 @@ export default function FloatingAiWidget() {
 
                 {/* SUGGESTED ACTION CHIPS */}
                 {msg.suggestedActions && msg.suggestedActions.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5 max-w-[90%]">
+                  <div className="mt-2 flex flex-wrap gap-1.5 max-w-[92%]">
                     {msg.suggestedActions.map((action, i) => (
                       <button
                         key={i}
                         onClick={() => handleSend(action)}
-                        className="text-[10px] font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-800 hover:border-sky-500/40 px-2.5 py-1 rounded-full transition-colors text-left"
+                        className="text-[10px] font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-800 hover:border-[#008ECC]/50 px-2.5 py-1 rounded-full transition-colors text-left"
                       >
                         {action}
                       </button>
@@ -383,7 +441,7 @@ export default function FloatingAiWidget() {
             {loading && (
               <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 text-xs px-3.5 py-2.5 rounded-2xl w-fit">
                 <Sparkles className="w-3.5 h-3.5 text-sky-400 animate-spin" />
-                <span>Nova AI is searching tools & database...</span>
+                <span>Nova AI is evaluating page context & database...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -399,7 +457,11 @@ export default function FloatingAiWidget() {
           >
             <input
               type="text"
-              placeholder="Ask anything about orders, products, specs, policies..."
+              placeholder={
+                viewingProduct 
+                  ? `Ask about ${viewingProduct.name.split(' ')[0]} (warranty, stock, specs)...` 
+                  : "Ask anything about orders, products, specs, policies..."
+              }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#008ECC]"
@@ -407,7 +469,7 @@ export default function FloatingAiWidget() {
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="bg-[#008ECC] hover:bg-[#007BB0] disabled:opacity-40 text-white p-2 rounded-xl transition-colors shrink-0 shadow-md shadow-sky-500/20"
+              className="bg-gradient-to-r from-[#008ECC] to-sky-600 hover:from-[#007BB0] hover:to-sky-700 disabled:opacity-40 text-white p-2 rounded-xl transition-colors shrink-0 shadow-md shadow-sky-500/20"
             >
               <Send className="w-4 h-4" />
             </button>

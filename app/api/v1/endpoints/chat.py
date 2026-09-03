@@ -7,6 +7,7 @@ from src.schemas.response import ChatRequestPayload, SupportResponse
 from src.schemas.parser import ResponseParser, _clean_raw_output
 from src.agent.builder import create_support_agent
 from src.agent.security import SecurityGuard
+from src.agent.context import format_page_context
 from src.memory.session_manager import SessionMemoryManager
 from src.tools.internet_tool import set_active_search_engine
 from src.utils.logger import logger
@@ -27,12 +28,19 @@ async def chat_endpoint(payload: ChatRequestPayload):
     if payload.search_engine:
         set_active_search_engine(payload.search_engine)
 
-    # 2. Retrieve history & append user message
+    # 2. Format Page Context
+    page_context_str = format_page_context(payload.page_context)
+
+    # 3. Retrieve history & append user message
     history = SessionMemoryManager.get_messages(payload.conversation_id)
     SessionMemoryManager.add_user_message(payload.conversation_id, payload.message)
 
-    # 3. Execute Agent
-    agent = create_support_agent(provider=payload.provider, model_name=payload.model)
+    # 4. Execute Agent with page context
+    agent = create_support_agent(
+        provider=payload.provider, 
+        model_name=payload.model,
+        page_context_str=page_context_str
+    )
     try:
         response_dict = agent.invoke({
             "input": payload.message,
@@ -47,7 +55,7 @@ async def chat_endpoint(payload: ChatRequestPayload):
         # Save clean AI response to memory
         SessionMemoryManager.add_ai_message(payload.conversation_id, clean_text)
         
-        # 4. Parse into structured output
+        # 5. Parse into structured output
         return ResponseParser.parse_agent_result(raw_output, intermediate_steps)
 
     except Exception as e:
@@ -67,11 +75,22 @@ async def stream_chat_endpoint(payload: ChatRequestPayload):
             yield {"event": "error", "data": json.dumps({"error": sec_msg})}
             return
 
+        # Format Page Context
+        page_context_str = format_page_context(payload.page_context)
+
+        # Set active search engine
+        if payload.search_engine:
+            set_active_search_engine(payload.search_engine)
+
         # Fetch history
         history = SessionMemoryManager.get_messages(payload.conversation_id)
         SessionMemoryManager.add_user_message(payload.conversation_id, payload.message)
         
-        agent = create_support_agent()
+        agent = create_support_agent(
+            provider=payload.provider,
+            model_name=payload.model,
+            page_context_str=page_context_str
+        )
         
         try:
             result = agent.invoke({
@@ -80,14 +99,15 @@ async def stream_chat_endpoint(payload: ChatRequestPayload):
                 "requesting_customer_id": payload.customer_id
             })
             full_text = str(result.get("output", ""))
+            clean_text = _clean_raw_output(full_text)
             
-            # Stream word-by-word tokens with simulated typing delay
-            words = full_text.split(" ")
+            # Stream word-by-word tokens with smooth simulated typing delay
+            words = clean_text.split(" ")
             for word in words:
                 yield {"event": "message", "data": json.dumps({"token": word + " "})}
-                await asyncio.sleep(0.03)
+                await asyncio.sleep(0.02)
 
-            SessionMemoryManager.add_ai_message(payload.conversation_id, full_text)
+            SessionMemoryManager.add_ai_message(payload.conversation_id, clean_text)
             yield {"event": "done", "data": json.dumps({"status": "completed"})}
 
         except Exception as e:

@@ -13,6 +13,7 @@ from src.config.settings import settings
 from src.agent.prompts import SYSTEM_PROMPT_TEMPLATE
 from src.tools.order_tool import get_order_status
 from src.tools.product_tool import search_products
+from src.tools.inventory_tool import check_inventory
 from src.tools.calculator_tool import calculate
 from src.tools.knowledge_tool import search_knowledge_base
 from src.tools.escalation_tool import escalate_to_human
@@ -63,11 +64,16 @@ def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = No
             temperature=0.35
         )
 
-def create_support_agent(provider: Optional[str] = None, model_name: Optional[str] = None) -> AgentExecutor:
-    """Build and return configured Tool Calling Agent Executor with loop prevention."""
+def create_support_agent(
+    provider: Optional[str] = None, 
+    model_name: Optional[str] = None,
+    page_context_str: Optional[str] = None
+) -> AgentExecutor:
+    """Build and return configured Tool Calling Agent Executor with live page context."""
     tools = [
         get_order_status,
         search_products,
+        check_inventory,
         calculate,
         search_knowledge_base,
         escalate_to_human,
@@ -78,8 +84,14 @@ def create_support_agent(provider: Optional[str] = None, model_name: Optional[st
 
     llm = get_llm_model(provider=provider, model_name=model_name)
 
+    # Format system prompt with real-time website browsing context
+    formatted_system_prompt = SYSTEM_PROMPT_TEMPLATE.replace(
+        "{page_context_str}", 
+        page_context_str or "No active browsing context provided."
+    )
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", SYSTEM_PROMPT_TEMPLATE),
+        ("system", formatted_system_prompt),
         MessagesPlaceholder(variable_name="chat_history", optional=True),
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad")

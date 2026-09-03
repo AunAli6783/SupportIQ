@@ -303,8 +303,8 @@ erDiagram
 | :--- | :--- | :---: | :--- |
 | **Phase 01** | **NovaCart Storefront Frontend** | ✅ **Done** | Next.js 14 Storefront, 12 Flagship Tech Products (Apple, Samsung, Dell, Lenovo, ASUS, Google, Sony), Cart (`/cart`), Checkout (`/checkout`), Order Tracking (`/orders`), and Embedded Floating Nova AI Widget. |
 | **Phase 02** | **Relational Database & Store Backend** | ✅ **Done** | PostgreSQL / SQLite relational database (`novacart.db`) with SQLAlchemy ORM models (`User`, `Category`, `Product`, `Order`, `OrderItem`, `ReturnRequest`), automated seed migration script, live inventory deduction, and 7 high-performance FastAPI Storefront REST endpoints (`/api/v1/store/products`, `/orders`, `/inventory`, `/auth/login`). |
-| **Phase 03** | **Live AI Widget & Context Bridge** | ⏳ **Next** | Real-time browser page context transmission (`viewing_product`, `cart_state`), SSE token streaming, and dynamic quick-action prompts. |
-| **Phase 04** | **SQL Database Agentic Tools** | 📋 **Planned** | Live database-backed `search_products`, `get_order_status`, and `check_inventory` with real-time stock counters. |
+| **Phase 03** | **Live AI Widget & Context Bridge** | ✅ **Done** | Real-time browser page context bridge (`current_path`, `viewing_product`, `cart_state`, `customer_profile`), dynamic page-adaptive suggestion chips, prompt context resolution rules, and live `check_inventory` tool integration. |
+| **Phase 04** | **SQL Database Agentic Tools** | ⏳ **Next** | Live database-backed `search_products`, `get_order_status`, and `check_inventory` with real-time stock counters. |
 | **Phase 05** | **Context-Aware RAG & Policy Grounding** | 📋 **Planned** | Dual-source synthesis combining live database product specs with official ChromaDB vector policy documents. |
 | **Phase 06** | **Autonomous Agentic Actions** | 📋 **Planned** | Self-service order cancellations with automated stock replenishment, RMA return request generation, and support tickets. |
 | **Phase 07** | **Authentication & Multi-Tenant Security** | 📋 **Planned** | JWT session token verification and cross-customer authorization barriers (`customer_id` ownership checks). |
