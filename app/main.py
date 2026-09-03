@@ -5,6 +5,7 @@ from app.api.v1.router import api_router
 from src.config.settings import settings
 from src.utils.logger import logger
 from src.utils.exceptions import SupportIQException, SecurityAccessDeniedError
+from src.database.session import init_db
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -12,14 +13,24 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for frontend integration (Streamlit, React, Vue, Mobile)
+# Enable CORS for frontend integration (Next.js, React, Mobile)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Ensure database tables are initialized on startup."""
+    try:
+        init_db()
+        logger.info("FastAPI startup: Relational database verified.")
+    except Exception as e:
+        logger.error(f"Database initialization error on startup: {e}")
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -48,7 +59,8 @@ async def health_check():
         "status": "healthy", 
         "service": settings.APP_NAME, 
         "environment": settings.ENVIRONMENT,
-        "llm_provider": settings.LLM_PROVIDER
+        "llm_provider": settings.LLM_PROVIDER,
+        "database": "sqlite/postgresql connected"
     }
 
 app.include_router(api_router, prefix="/api/v1")

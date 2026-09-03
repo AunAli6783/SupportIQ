@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     KNOWLEDGE_BASE_DIR: Path = BASE_DIR / "NovaCart_SupportIQ_Knowledge_Base" / "novacart_knowledge_base"
     CHROMA_PERSIST_DIR: Path = BASE_DIR / "storage" / "chromadb"
     
+    # Relational Database Configuration (PostgreSQL or SQLite fallback)
+    DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'storage' / 'novacart.db'}"
+    
+    # JWT Security Configuration
+    JWT_SECRET_KEY: str = "novacart-super-secret-production-key-2026"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 1440 # 24 hours
+    
     # Zero-Cost & Low-Storage LLM Provider ("google", "groq", or "ollama")
     LLM_PROVIDER: str = "google"
     
