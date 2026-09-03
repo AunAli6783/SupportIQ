@@ -133,6 +133,7 @@ export default function Navbar() {
               placeholder="Search MacBook M3, Galaxy S25 Ultra, RTX 4090, Dell XPS, specs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              suppressHydrationWarning
               className="w-full bg-transparent px-2 py-2 text-xs md:text-sm text-slate-800 placeholder-slate-400 focus:outline-none font-medium"
             />
             <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-mono text-slate-500 mr-2 border border-slate-200">
