@@ -76,26 +76,39 @@ export default function CheckoutPage() {
       }))
     };
 
-    // Save to local storage for instant live tracking across pages
-    const existingOrders = JSON.parse(localStorage.getItem('novacart_orders') || '[]');
-    localStorage.setItem('novacart_orders', JSON.stringify([newOrder, ...existingOrders]));
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
 
-    // Attempt FastAPI sync if available
     try {
-      await fetch('http://localhost:8000/api/v1/store/orders', {
+      const response = await fetch(`${API_URL}/store/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newOrder)
       });
+
+      if (response.ok) {
+        const savedDbOrder = await response.json();
+        // Save database-confirmed order to local storage
+        const existingOrders = JSON.parse(localStorage.getItem('novacart_orders') || '[]');
+        localStorage.setItem('novacart_orders', JSON.stringify([savedDbOrder, ...existingOrders]));
+
+        setCompletedOrder(savedDbOrder);
+        clearCart();
+        setPlacing(false);
+        return;
+      }
     } catch (err) {
-      // Graceful fallback to client storage
+      console.warn('Backend sync failed, storing locally:', err);
     }
+
+    // Client fallback if backend unreachable
+    const existingOrders = JSON.parse(localStorage.getItem('novacart_orders') || '[]');
+    localStorage.setItem('novacart_orders', JSON.stringify([newOrder, ...existingOrders]));
 
     setTimeout(() => {
       setPlacing(false);
       setCompletedOrder(newOrder);
       clearCart();
-    }, 1200);
+    }, 800);
   };
 
   if (completedOrder) {

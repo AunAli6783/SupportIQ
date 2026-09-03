@@ -22,15 +22,20 @@ class ProductResponse(BaseModel):
 class OrderItemCreate(BaseModel):
     product_id: str
     quantity: int = Field(gt=0, description="Quantity must be at least 1")
+    name: Optional[str] = None
+    price: Optional[float] = None
+    image: Optional[str] = None
 
 class OrderCreateRequest(BaseModel):
+    id: Optional[str] = Field(default=None, description="Optional custom Order ID, e.g. NC-10025")
     customer_id: str = Field(..., description="Customer ID, e.g. CUS-001")
-    customer_name: str
-    email: str
-    phone: str
+    customer_name: Optional[str] = "Valued Customer"
+    email: Optional[str] = "customer@example.pk"
+    phone: Optional[str] = "+92 300 0000000"
     shipping_address: str
     courier: Optional[str] = "Leopard Express"
     payment_method: Optional[str] = "Cash on Delivery (COD)"
+    tracking_number: Optional[str] = None
     items: List[OrderItemCreate]
 
 class OrderResponse(BaseModel):
@@ -54,7 +59,7 @@ class InventoryCheckResponse(BaseModel):
     price: float
 
 class LoginRequest(BaseModel):
-    email: str
+    email: Optional[str] = None
     customer_id: Optional[str] = None
 
 class LoginResponse(BaseModel):

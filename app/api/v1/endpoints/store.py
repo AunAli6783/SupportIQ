@@ -100,11 +100,16 @@ def place_order(payload: OrderCreateRequest, db: Session = Depends(get_db)):
     # 1. Verify / Ensure Customer Profile
     customer = db.query(User).filter(User.id == payload.customer_id).first()
     if not customer:
+
+        # Check if email is already used by another account
+        existing_email_user = db.query(User).filter(User.email.ilike(payload.email)).first()
+        email_to_use = payload.email if not existing_email_user else f"{payload.customer_id.lower()}@novacart.pk"
+        
         customer = User(
             id=payload.customer_id,
-            name=payload.customer_name,
-            email=payload.email,
-            phone=payload.phone,
+            name=payload.customer_name or "Valued Customer",
+            email=email_to_use,
+            phone=payload.phone or "+92 300 0000000",
             address=payload.shipping_address,
             city="Islamabad"
         )
@@ -145,40 +150,49 @@ def place_order(payload: OrderCreateRequest, db: Session = Depends(get_db)):
         })
         
     # 3. Create Order Record
-    order_id = f"NC-{random.randint(10000, 99999)}"
-    tracking_num = f"LP-{random.randint(100000, 999999)}"
+    order_id = payload.id if payload.id else f"NC-{random.randint(10000, 99999)}"
+    tracking_num = payload.tracking_number if payload.tracking_number else f"LP-{random.randint(100000, 999999)}"
     
-    order = Order(
-        id=order_id,
-        customer_id=customer.id,
-        status="Processing",
-        total_amount=total_amount,
-        shipping_address=payload.shipping_address,
-        courier=payload.courier or "Leopard Express",
-        tracking_number=tracking_num,
-        payment_method=payload.payment_method or "Cash on Delivery (COD)",
-        created_at=datetime.utcnow()
-    )
-    db.add(order)
-    db.flush()
-    
-    # 4. Create Order Item Records
-    for item_data in order_items_to_create:
-        line_item = OrderItem(
-            order_id=order.id,
-            product_id=item_data["product_id"],
-            product_name=item_data["product_name"],
-            quantity=item_data["quantity"],
-            unit_price=item_data["unit_price"],
-            subtotal=item_data["subtotal"],
-            image_url=item_data["image_url"]
+    try:
+        # 3. Create Order Record
+        order = Order(
+            id=order_id,
+            customer_id=customer.id,
+            status="Processing",
+            total_amount=total_amount,
+            shipping_address=payload.shipping_address,
+            courier=payload.courier or "Leopard Express",
+            tracking_number=tracking_num,
+            payment_method=payload.payment_method or "Cash on Delivery (COD)",
+            created_at=datetime.utcnow()
         )
-        db.add(line_item)
+        db.add(order)
+        db.flush()
         
-    db.commit()
-    db.refresh(order)
-    logger.info(f"Successfully placed Order '{order.id}' for Total {order.total_amount:,.0f} PKR. Inventory updated.")
-    return order.to_dict()
+        # 4. Create Order Item Records
+        for item_data in order_items_to_create:
+            line_item = OrderItem(
+                order_id=order.id,
+                product_id=item_data["product_id"],
+                product_name=item_data["product_name"],
+                quantity=item_data["quantity"],
+                unit_price=item_data["unit_price"],
+                subtotal=item_data["subtotal"],
+                image_url=item_data["image_url"]
+            )
+            db.add(line_item)
+            
+        db.commit()
+        db.refresh(order)
+        logger.info(f"Successfully placed Order '{order.id}' for Total {order.total_amount:,.0f} PKR. Inventory updated.")
+        return order.to_dict()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to place order: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Order creation failed: {str(e)}"
+        )
 
 
 @router.get("/orders/customer/{customer_id}", response_model=List[OrderResponse])
