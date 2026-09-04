@@ -7,11 +7,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from src.database.session import get_db
-from src.database.models import Product, Order, OrderItem, User, Category
+from src.database.models import Product, Order, OrderItem, User, Category, ReturnRequest
 from src.schemas.store import (
     ProductResponse, 
     OrderCreateRequest, 
     OrderResponse, 
+    OrderCancelRequest,
+    ReturnSubmitRequest,
+    AddressUpdateRequest,
     InventoryCheckResponse,
     LoginRequest,
     LoginResponse
@@ -257,3 +260,79 @@ def customer_login(payload: LoginRequest, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "customer": user.to_dict()
     }
+
+
+@router.post("/orders/cancel")
+def cancel_customer_order(payload: OrderCancelRequest, db: Session = Depends(get_db)):
+    """Cancel order and replenish inventory."""
+    clean_id = payload.order_id.strip().upper()
+    order = db.query(Order).filter(Order.id == clean_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail=f"Order '{payload.order_id}' not found.")
+        
+    if payload.customer_id and order.customer_id != payload.customer_id:
+        raise HTTPException(status_code=403, detail="Unauthorized: Order belongs to another account.")
+        
+    if order.status.lower() in ["shipped", "delivered"]:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Order is already {order.status} and cannot be cancelled. Submit a return instead."
+        )
+        
+    order.status = "Cancelled"
+    for item in order.items:
+        prod = db.query(Product).filter(Product.id == item.product_id).first()
+        if prod:
+            prod.stock += item.quantity
+            
+    db.commit()
+    db.refresh(order)
+    logger.info(f"Order '{order.id}' cancelled via REST endpoint.")
+    return {"message": "Order cancelled successfully", "order": order.to_dict()}
+
+
+@router.post("/orders/returns")
+def create_return_request(payload: ReturnSubmitRequest, db: Session = Depends(get_db)):
+    """Submit an RMA return authorization request."""
+    clean_id = payload.order_id.strip().upper()
+    order = db.query(Order).filter(Order.id == clean_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail=f"Order '{payload.order_id}' not found.")
+        
+    if order.customer_id != payload.customer_id:
+        raise HTTPException(status_code=403, detail="Unauthorized: Order belongs to another account.")
+        
+    rma_id = f"RMA-{random.randint(10000, 99999)}"
+    ret_req = ReturnRequest(
+        id=rma_id,
+        order_id=order.id,
+        customer_id=payload.customer_id,
+        product_id=payload.product_id or (order.items[0].product_id if order.items else "GENERAL"),
+        reason=payload.reason,
+        status="Approved",
+        created_at=datetime.utcnow()
+    )
+    db.add(ret_req)
+    db.commit()
+    db.refresh(ret_req)
+    return {"message": "Return request approved", "return_request": ret_req.to_dict()}
+
+
+@router.post("/orders/address")
+def update_order_address(payload: AddressUpdateRequest, db: Session = Depends(get_db)):
+    """Update destination address on an un-dispatched order."""
+    clean_id = payload.order_id.strip().upper()
+    order = db.query(Order).filter(Order.id == clean_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail=f"Order '{payload.order_id}' not found.")
+        
+    if payload.customer_id and order.customer_id != payload.customer_id:
+        raise HTTPException(status_code=403, detail="Unauthorized: Order belongs to another account.")
+        
+    if order.status.lower() in ["shipped", "delivered"]:
+        raise HTTPException(status_code=400, detail="Order has already shipped.")
+        
+    order.shipping_address = payload.new_address.strip()
+    db.commit()
+    db.refresh(order)
+    return {"message": "Shipping address updated successfully", "order": order.to_dict()}

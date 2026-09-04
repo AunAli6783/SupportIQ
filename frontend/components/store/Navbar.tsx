@@ -94,6 +94,14 @@ export default function Navbar() {
               <Package className="w-3.5 h-3.5 text-[#008ECC] group-hover:scale-110 transition-transform" />
               <span>Track Orders</span>
             </Link>
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <Link 
+              href="/support" 
+              className="text-emerald-400 hover:text-white font-bold transition-colors flex items-center gap-1.5 group"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span>Resolution Hub</span>
+            </Link>
           </div>
         </div>
       </div>

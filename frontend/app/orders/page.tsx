@@ -245,6 +245,72 @@ export default function OrdersPage() {
                   </div>
                 ))}
               </div>
+
+              {/* ACTION FOOTER */}
+              <div className="px-6 py-3 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-3 text-xs">
+                <span className="text-slate-400 font-medium">
+                  {order.status === 'Cancelled' ? 'Order cancelled & refunded' : 'Need help with this order? Use Nova AI Assistant'}
+                </span>
+                <div className="flex items-center gap-2">
+                  {order.status === 'Processing' && (
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Are you sure you want to cancel order ${order.id}?`)) {
+                          try {
+                            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
+                            await fetch(`${API_URL}/store/orders/cancel`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ order_id: order.id, customer_id: user?.id })
+                            });
+                          } catch (e) {
+                            console.warn(e);
+                          }
+                          const updated = orders.map((o) => o.id === order.id ? { ...o, status: 'Cancelled' } : o);
+                          setOrders(updated);
+                          localStorage.setItem('novacart_orders', JSON.stringify(updated));
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 bg-rose-50/50 hover:bg-rose-100 font-bold transition-colors"
+                    >
+                      Cancel Order
+                    </button>
+                  )}
+
+                  {order.status === 'Delivered' && (
+                    <button
+                      onClick={async () => {
+                        const reason = prompt('Please enter reason for return (e.g. Unopened box, Defective accessory):');
+                        if (reason) {
+                          try {
+                            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
+                            const res = await fetch(`${API_URL}/store/orders/returns`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ order_id: order.id, customer_id: user?.id || 'CUS-001', reason })
+                            });
+                            const data = await res.json();
+                            alert(`Return Authorized! RMA Number: ${data.return_request?.id || 'RMA-SUCCESS'}. Prepaid pickup label generated.`);
+                          } catch (e) {
+                            alert('Return request recorded with Support team.');
+                          }
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl border border-emerald-200 text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100 font-bold transition-colors"
+                    >
+                      Request Return (RMA)
+                    </button>
+                  )}
+
+                  <Link
+                    href="/support"
+                    className="px-3 py-1.5 rounded-xl border border-sky-200 text-[#008ECC] bg-white hover:bg-sky-50 font-bold transition-colors flex items-center gap-1"
+                  >
+                    <Bot className="w-3.5 h-3.5" />
+                    AI Support
+                  </Link>
+                </div>
+              </div>
             </div>
           ))}
         </div>

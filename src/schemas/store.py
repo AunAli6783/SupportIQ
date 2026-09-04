@@ -51,6 +51,22 @@ class OrderResponse(BaseModel):
     created_at: Optional[str] = None
     items: List[Dict[str, Any]] = []
 
+class OrderCancelRequest(BaseModel):
+    order_id: str
+    customer_id: Optional[str] = None
+    reason: Optional[str] = "Customer requested cancellation"
+
+class ReturnSubmitRequest(BaseModel):
+    order_id: str
+    customer_id: str
+    reason: str
+    product_id: Optional[str] = None
+
+class AddressUpdateRequest(BaseModel):
+    order_id: str
+    new_address: str
+    customer_id: Optional[str] = None
+
 class InventoryCheckResponse(BaseModel):
     product_id: str
     product_name: str
