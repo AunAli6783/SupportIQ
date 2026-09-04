@@ -78,6 +78,36 @@ def search_products(
             if keyword_filters:
                 matches = db_query.filter(or_(*keyword_filters)).limit(6).all()
 
+        # 3. Fuzzy matching fallback for typos (e.g. 'galax ys35' -> 'Galaxy S25 Ultra')
+        if not matches:
+            import difflib
+            all_prods = db.query(Product).all()
+            scored = []
+            for p in all_prods:
+                full_name_lower = p.name.lower()
+                brand_lower = p.brand.lower()
+                ratio = difflib.SequenceMatcher(None, q_clean, full_name_lower).ratio()
+                token_scores = []
+                for qw in normalized_words:
+                    if len(qw) >= 3:
+                        best_tok = max([difflib.SequenceMatcher(None, qw, pw).ratio() for pw in full_name_lower.split() + brand_lower.split()] or [0])
+                        token_scores.append(best_tok)
+                avg_token_score = (sum(token_scores) / len(token_scores)) if token_scores else 0
+                max_score = max(ratio, avg_token_score)
+                if max_score >= 0.52:
+                    scored.append((max_score, p))
+
+            if scored:
+                scored.sort(key=lambda x: x[0], reverse=True)
+                seen_ids = set()
+                matches = []
+                for _, p in scored:
+                    if p.id not in seen_ids:
+                        seen_ids.add(p.id)
+                        matches.append(p)
+                    if len(matches) >= 4:
+                        break
+
         if not matches:
             filters_applied = []
             if category: filters_applied.append(f"Category='{category}'")

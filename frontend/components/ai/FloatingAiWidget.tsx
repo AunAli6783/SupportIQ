@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import Link from 'next/link';
 import { 
   Bot, 
   X, 
@@ -20,6 +22,7 @@ import {
   ShieldCheck,
   Zap,
   ShoppingBag,
+  ShoppingCart,
   Package,
   CreditCard,
   Layers,
@@ -27,7 +30,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
-import { PRODUCTS } from '../../data/products';
+import { PRODUCTS, Product } from '../../data/products';
 
 interface Message {
   id: string;
@@ -50,6 +53,7 @@ export default function FloatingAiWidget() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [addedItems, setAddedItems] = useState<{ [key: string]: boolean }>({});
 
   // Engine Switchers
   const [selectedEngine, setSelectedEngine] = useState('groq:openai/gpt-oss-120b');
@@ -62,6 +66,30 @@ export default function FloatingAiWidget() {
   // Identify currently viewed product if on /products/[id]
   const viewingProductId = pathname.startsWith('/products/') ? pathname.replace('/products/', '') : null;
   const viewingProduct = viewingProductId ? PRODUCTS.find((p) => p.id === viewingProductId) : null;
+
+  // Helper to detect products in text for inline interactive cards
+  const detectProducts = (text: string): Product[] => {
+    if (!text) return [];
+    const tLower = text.toLowerCase();
+    const matches: Product[] = [];
+    
+    for (const p of PRODUCTS) {
+      const pIdLower = p.id.toLowerCase();
+      const pNameLower = p.name.toLowerCase();
+      
+      if (tLower.includes(pIdLower)) {
+        if (!matches.some((m) => m.id === p.id)) matches.push(p);
+        continue;
+      }
+      
+      const keyWords = pNameLower.split(' ').filter((w) => w.length > 3 && !['apple', 'laptop', 'phone', 'with'].includes(w));
+      const matchCount = keyWords.filter((kw) => tLower.includes(kw)).length;
+      if (matchCount >= 2 || (keyWords.length === 1 && matchCount === 1)) {
+        if (!matches.some((m) => m.id === p.id)) matches.push(p);
+      }
+    }
+    return matches.slice(0, 3);
+  };
 
   // DYNAMIC CONTEXTUAL QUICK ACTION CHIPS
   const getContextualChips = () => {
@@ -147,6 +175,14 @@ export default function FloatingAiWidget() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleInlineAddToCart = (prod: Product) => {
+    addToCart(prod, 1);
+    setAddedItems((prev) => ({ ...prev, [prod.id]: true }));
+    setTimeout(() => {
+      setAddedItems((prev) => ({ ...prev, [prod.id]: false }));
+    }, 2000);
+  };
+
   const handleSend = async (textToSend?: string) => {
     const query = (textToSend || input).trim();
     if (!query || loading) return;
@@ -160,6 +196,55 @@ export default function FloatingAiWidget() {
 
     setMessages((prev) => [...prev, userMsg]);
     if (!textToSend) setInput('');
+
+    // Conversational Add to Cart Detection
+    const qLower = query.toLowerCase();
+    const isAddIntent = 
+      qLower.includes('add to cart') || 
+      qLower.includes('add to bag') || 
+      qLower.includes('place order') || 
+      qLower.includes('buy this') ||
+      qLower.startsWith('add ');
+
+    if (isAddIntent) {
+      let targetProduct: Product | undefined = viewingProduct || undefined;
+      
+      if (!targetProduct) {
+        for (const p of PRODUCTS) {
+          const pWords = p.name.toLowerCase().split(' ').filter((w) => w.length > 3);
+          if (pWords.some((w) => qLower.includes(w)) || qLower.includes(p.id.toLowerCase())) {
+            targetProduct = p;
+            break;
+          }
+        }
+      }
+
+      if (!targetProduct && messages.length > 0) {
+        const lastAiMsg = [...messages].reverse().find((m) => m.sender === 'assistant');
+        if (lastAiMsg) {
+          const prods = detectProducts(lastAiMsg.text);
+          if (prods.length > 0) {
+            targetProduct = prods[0];
+          }
+        }
+      }
+
+      if (targetProduct) {
+        addToCart(targetProduct, 1);
+        handleInlineAddToCart(targetProduct);
+        const confirmMsg: Message = {
+          id: `msg_cart_${Date.now()}`,
+          sender: 'assistant',
+          text: `🛒 **${targetProduct.name}** (${targetProduct.price.toLocaleString()} PKR) has been added to your shopping cart!\n\n• [👉 View Shopping Cart (${itemCount + 1} items)](/cart)\n• [🔒 Proceed to Checkout](/checkout)`,
+          category: 'cart_action',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          suggestedActions: ['Proceed to Checkout', 'View Shopping Cart', 'Continue Shopping']
+        };
+        setMessages((prev) => [...prev, confirmMsg]);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -380,56 +465,139 @@ export default function FloatingAiWidget() {
 
           {/* MESSAGES SCROLL AREA */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
-              >
-                <div
-                  className={`max-w-[88%] rounded-2xl p-3.5 text-xs leading-relaxed relative group transition-all ${
-                    msg.sender === 'user'
-                      ? 'bg-gradient-to-r from-[#008ECC] via-sky-500 to-sky-600 text-white rounded-tr-none shadow-lg shadow-sky-500/20 font-medium'
-                      : 'bg-slate-900/90 text-slate-200 border border-slate-800/80 rounded-tl-none shadow-sm backdrop-blur-md'
-                  }`}
-                >
-                  <ReactMarkdown
-                    components={{
-                      a: ({ node, ...props }) => (
-                        <a
-                          {...props}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sky-400 hover:text-sky-300 underline font-bold"
-                        />
-                      ),
-                      strong: ({ node, ...props }) => (
-                        <strong {...props} className="font-bold text-white" />
-                      ),
-                      ul: ({ node, ...props }) => (
-                        <ul {...props} className="list-disc pl-4 space-y-1 my-1.5" />
-                      ),
-                      li: ({ node, ...props }) => (
-                        <li {...props} className="text-slate-300" />
-                      )
-                    }}
-                  >
-                    {msg.text}
-                  </ReactMarkdown>
+            {messages.map((msg) => {
+              const detectedProds = msg.sender === 'assistant' ? detectProducts(msg.text) : [];
 
-                  {/* CITATION SOURCES PILLS */}
-                  {msg.sources && msg.sources.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-slate-800/70 flex flex-wrap gap-1.5">
-                      {msg.sources.map((s, idx) => (
-                        <span
-                          key={idx}
-                          className="text-[10px] bg-slate-950/80 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"
-                        >
-                          <Globe className="w-2.5 h-2.5" />
-                          {s.source}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
+                >
+                  <div
+                    className={`max-w-[94%] rounded-2xl p-3.5 text-xs leading-relaxed relative group transition-all ${
+                      msg.sender === 'user'
+                        ? 'bg-gradient-to-r from-[#008ECC] via-sky-500 to-sky-600 text-white rounded-tr-none shadow-lg shadow-sky-500/20 font-medium'
+                        : 'bg-slate-900/95 text-slate-200 border border-slate-800/80 rounded-tl-none shadow-sm backdrop-blur-md'
+                    }`}
+                  >
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        table: ({ node, ...props }) => (
+                          <div className="overflow-x-auto my-3 rounded-xl border border-slate-700/80 bg-slate-950/80 shadow-md">
+                            <table {...props} className="w-full text-[11px] text-left divide-y divide-slate-800 border-collapse" />
+                          </div>
+                        ),
+                        thead: ({ node, ...props }) => (
+                          <thead {...props} className="bg-slate-900/90 text-[#008ECC] font-bold uppercase tracking-wider text-[10px]" />
+                        ),
+                        tbody: ({ node, ...props }) => (
+                          <tbody {...props} className="divide-y divide-slate-800/60 bg-slate-950/40" />
+                        ),
+                        tr: ({ node, ...props }) => (
+                          <tr {...props} className="hover:bg-slate-800/40 transition-colors" />
+                        ),
+                        th: ({ node, ...props }) => (
+                          <th {...props} className="px-3 py-2 font-bold text-slate-200 border-b border-slate-700 whitespace-nowrap" />
+                        ),
+                        td: ({ node, ...props }) => (
+                          <td {...props} className="px-3 py-2 text-slate-300 align-top leading-normal" />
+                        ),
+                        a: ({ node, ...props }) => (
+                          <a
+                            {...props}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sky-400 hover:text-sky-300 underline font-bold break-all"
+                          />
+                        ),
+                        strong: ({ node, ...props }) => (
+                          <strong {...props} className="font-bold text-white" />
+                        ),
+                        ul: ({ node, ...props }) => (
+                          <ul {...props} className="list-disc pl-4 space-y-1 my-2 text-slate-200" />
+                        ),
+                        ol: ({ node, ...props }) => (
+                          <ol {...props} className="list-decimal pl-4 space-y-1 my-2 text-slate-200" />
+                        ),
+                        li: ({ node, ...props }) => (
+                          <li {...props} className="text-slate-300" />
+                        ),
+                        p: ({ node, ...props }) => (
+                          <p {...props} className="my-1.5 leading-relaxed" />
+                        ),
+                        code: ({ node, ...props }) => (
+                          <code {...props} className="bg-slate-800 text-sky-300 px-1.5 py-0.5 rounded text-[11px] font-mono" />
+                        )
+                      }}
+                    >
+                      {msg.text}
+                    </ReactMarkdown>
+
+                    {/* INLINE PRODUCT CARDS WITH ADD TO CART */}
+                    {detectedProds.length > 0 && (
+                      <div className="mt-3 pt-2.5 border-t border-slate-800/80 space-y-2">
+                        {detectedProds.map((prod) => (
+                          <div
+                            key={prod.id}
+                            className="p-2.5 rounded-2xl bg-gradient-to-r from-slate-950 to-slate-900 border border-sky-500/30 flex items-center justify-between gap-3 shadow-md hover:border-sky-400/50 transition-all"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <img
+                                src={prod.image}
+                                alt={prod.name}
+                                className="w-10 h-10 object-contain rounded-xl bg-slate-800/90 p-1 shrink-0 border border-slate-700"
+                              />
+                              <div className="min-w-0">
+                                <span className="text-[9px] font-bold uppercase text-[#008ECC] tracking-wider">{prod.brand}</span>
+                                <p className="text-[11px] font-bold text-white truncate leading-tight">{prod.name}</p>
+                                <p className="text-[10px] font-black text-sky-300 mt-0.5">
+                                  {prod.price.toLocaleString()} PKR
+                                  {prod.stock > 0 && (
+                                    <span className="text-[9px] font-normal text-emerald-400 ml-1.5">• In Stock</span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleInlineAddToCart(prod)}
+                              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all shrink-0 active:scale-95 ${
+                                addedItems[prod.id]
+                                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/25'
+                                  : 'bg-gradient-to-r from-[#008ECC] to-sky-600 hover:from-[#007BB0] hover:to-sky-700 text-white shadow-md shadow-sky-500/25'
+                              }`}
+                            >
+                              {addedItems[prod.id] ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Added!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ShoppingCart className="w-3.5 h-3.5" />
+                                  <span>Add to Cart</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* CITATION SOURCES PILLS */}
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="mt-2.5 pt-2 border-t border-slate-800/70 flex flex-wrap gap-1.5">
+                        {msg.sources.map((s, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] bg-slate-950/80 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"
+                          >
+                            <Globe className="w-2.5 h-2.5" />
+                            {s.source}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                   {/* COPY BUTTON */}
                   {msg.sender === 'assistant' && (
@@ -459,7 +627,8 @@ export default function FloatingAiWidget() {
                 
                 <span className="text-[9px] text-slate-500 mt-1 px-1 font-mono">{msg.timestamp}</span>
               </div>
-            ))}
+            );
+          })}
 
             {loading && (
               <div className="flex items-center gap-2.5 bg-slate-900/90 border border-slate-800/90 text-slate-300 text-xs px-4 py-3 rounded-2xl w-fit shadow-md animate-pulse">
