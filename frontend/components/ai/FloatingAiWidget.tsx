@@ -251,27 +251,34 @@ export default function FloatingAiWidget() {
 
       {/* 2. EXPANDABLE CHAT DRAWER */}
       {isOpen && (
-        <div className="fixed bottom-4 right-4 z-50 w-[94vw] sm:w-[440px] md:w-[480px] h-[640px] max-h-[90vh] bg-slate-950 text-slate-100 rounded-3xl shadow-2xl border border-slate-800 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-4 right-4 z-50 w-[94vw] sm:w-[450px] md:w-[480px] h-[660px] max-h-[92vh] bg-slate-950/95 backdrop-blur-2xl text-slate-100 rounded-3xl shadow-2xl border border-slate-800/80 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300 ring-1 ring-white/10">
           
           {/* HEADER */}
-          <div className="p-3.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#008ECC] shadow-md shadow-sky-500/20 shrink-0 bg-sky-400">
-                <img
-                  src="/nova-robot.jpg"
-                  alt="Nova AI Robot"
-                  className="w-full h-full object-cover"
-                />
+          <div className="p-4 bg-gradient-to-r from-slate-950 via-[#0B132B] to-slate-950 border-b border-slate-800/80 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-[#008ECC] shadow-lg shadow-sky-500/25 shrink-0 bg-sky-950/60 p-0.5">
+                  <img
+                    src="/nova-robot.jpg"
+                    alt="Nova AI Robot"
+                    className="w-full h-full object-cover rounded-xl"
+                  />
+                </div>
+                <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-slate-950"></span>
+                </span>
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-100 flex items-center gap-1.5 leading-none">
+                <h3 className="text-sm font-black text-white flex items-center gap-1.5 leading-none tracking-tight">
                   Nova AI Assistant
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-mono font-bold bg-[#008ECC]/20 text-[#008ECC] px-1.5 py-0.5 rounded-md border border-[#008ECC]/30">2026 PRO</span>
                 </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
-                  <span>Context-Aware</span>
+                <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                  <span>Browsing Context Active</span>
                   <span>•</span>
-                  <span className="text-sky-400 font-medium">{user ? user.name : 'Guest'}</span>
+                  <span className="text-sky-300 font-bold">{user ? user.name : 'Guest User'}</span>
                 </p>
               </div>
             </div>
@@ -280,15 +287,15 @@ export default function FloatingAiWidget() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setMessages([])}
-                title="Clear Chat"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                title="Clear Chat History"
+                className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                title="Close Assistant"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title="Minimize Assistant"
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -366,10 +373,10 @@ export default function FloatingAiWidget() {
                 className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`max-w-[88%] rounded-2xl p-3 text-xs leading-relaxed relative group ${
+                  className={`max-w-[88%] rounded-2xl p-3.5 text-xs leading-relaxed relative group transition-all ${
                     msg.sender === 'user'
-                      ? 'bg-gradient-to-r from-[#008ECC] to-sky-600 text-white rounded-tr-none shadow-md shadow-sky-500/20'
-                      : 'bg-slate-900 text-slate-200 border border-slate-800 rounded-tl-none shadow-sm'
+                      ? 'bg-gradient-to-r from-[#008ECC] via-sky-500 to-sky-600 text-white rounded-tr-none shadow-lg shadow-sky-500/20 font-medium'
+                      : 'bg-slate-900/90 text-slate-200 border border-slate-800/80 rounded-tl-none shadow-sm backdrop-blur-md'
                   }`}
                 >
                   <ReactMarkdown
@@ -379,23 +386,26 @@ export default function FloatingAiWidget() {
                           {...props}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-cyan-400 font-bold underline hover:text-cyan-300 inline-flex items-center gap-0.5"
-                        >
-                          {props.children}
-                          <ExternalLink className="w-2.5 h-2.5 inline" />
-                        </a>
+                          className="text-sky-400 hover:text-sky-300 underline font-bold"
+                        />
                       ),
-                      p: ({ node, ...props }) => <p className="mb-1.5 last:mb-0" {...props} />,
-                      ul: ({ node, ...props }) => <ul className="list-disc ml-4 space-y-1 my-1" {...props} />,
-                      li: ({ node, ...props }) => <li {...props} />,
+                      strong: ({ node, ...props }) => (
+                        <strong {...props} className="font-bold text-white" />
+                      ),
+                      ul: ({ node, ...props }) => (
+                        <ul {...props} className="list-disc pl-4 space-y-1 my-1.5" />
+                      ),
+                      li: ({ node, ...props }) => (
+                        <li {...props} className="text-slate-300" />
+                      )
                     }}
                   >
                     {msg.text}
                   </ReactMarkdown>
 
-                  {/* SOURCES BADGES */}
+                  {/* CITATION SOURCES PILLS */}
                   {msg.sources && msg.sources.length > 0 && (
-                    <div className="mt-2.5 pt-2 border-t border-slate-800 flex flex-wrap gap-1">
+                    <div className="mt-2 pt-2 border-t border-slate-800/70 flex flex-wrap gap-1.5">
                       {msg.sources.map((s, idx) => (
                         <span
                           key={idx}
@@ -412,21 +422,21 @@ export default function FloatingAiWidget() {
                   {msg.sender === 'assistant' && (
                     <button
                       onClick={() => handleCopy(msg.text, msg.id)}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-opacity"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-opacity"
                     >
-                      {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   )}
                 </div>
 
                 {/* SUGGESTED ACTION CHIPS */}
                 {msg.suggestedActions && msg.suggestedActions.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5 max-w-[92%]">
+                  <div className="mt-2.5 flex flex-wrap gap-1.5 max-w-[92%]">
                     {msg.suggestedActions.map((action, i) => (
                       <button
                         key={i}
                         onClick={() => handleSend(action)}
-                        className="text-[10px] font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-800 hover:border-[#008ECC]/50 px-2.5 py-1 rounded-full transition-colors text-left"
+                        className="text-[10px] font-bold bg-slate-900/90 hover:bg-sky-950/60 text-sky-300 hover:text-white border border-slate-800 hover:border-[#008ECC] px-3 py-1.5 rounded-full transition-all text-left shadow-xs"
                       >
                         {action}
                       </button>
@@ -434,14 +444,14 @@ export default function FloatingAiWidget() {
                   </div>
                 )}
                 
-                <span className="text-[9px] text-slate-500 mt-1 px-1">{msg.timestamp}</span>
+                <span className="text-[9px] text-slate-500 mt-1 px-1 font-mono">{msg.timestamp}</span>
               </div>
             ))}
 
             {loading && (
-              <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 text-xs px-3.5 py-2.5 rounded-2xl w-fit">
-                <Sparkles className="w-3.5 h-3.5 text-sky-400 animate-spin" />
-                <span>Nova AI is evaluating page context & database...</span>
+              <div className="flex items-center gap-2.5 bg-slate-900/90 border border-slate-800/90 text-slate-300 text-xs px-4 py-3 rounded-2xl w-fit shadow-md animate-pulse">
+                <Sparkles className="w-4 h-4 text-[#008ECC] animate-spin" />
+                <span className="font-medium">Nova AI is evaluating page context & database...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -453,7 +463,7 @@ export default function FloatingAiWidget() {
               e.preventDefault();
               handleSend();
             }}
-            className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2"
+            className="p-3.5 bg-slate-950/90 border-t border-slate-800/80 flex items-center gap-2.5"
           >
             <input
               type="text"
@@ -464,12 +474,12 @@ export default function FloatingAiWidget() {
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#008ECC]"
+              className="flex-1 bg-slate-900/90 border border-slate-800 hover:border-slate-700 focus:border-[#008ECC] focus:ring-2 focus:ring-sky-500/20 rounded-2xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none transition-all font-medium"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="bg-gradient-to-r from-[#008ECC] to-sky-600 hover:from-[#007BB0] hover:to-sky-700 disabled:opacity-40 text-white p-2 rounded-xl transition-colors shrink-0 shadow-md shadow-sky-500/20"
+              className="bg-gradient-to-r from-[#008ECC] to-sky-600 hover:from-[#007BB0] hover:to-sky-700 disabled:opacity-40 text-white p-2.5 rounded-2xl transition-all shrink-0 shadow-lg shadow-sky-500/25 active:scale-95"
             >
               <Send className="w-4 h-4" />
             </button>
