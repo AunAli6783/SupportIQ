@@ -19,9 +19,10 @@ class SessionMemoryManager:
         return cls._sessions[conversation_id]
 
     @classmethod
-    def get_messages(cls, conversation_id: str) -> List[BaseMessage]:
-        """Get message history list for agent prompt injection."""
-        return cls.get_history(conversation_id).messages
+    def get_messages(cls, conversation_id: str, limit: int = 6) -> List[BaseMessage]:
+        """Get message history list for agent prompt injection (limited to last `limit` messages to prevent token bloat)."""
+        all_msgs = list(cls.get_history(conversation_id).messages)
+        return all_msgs[-limit:] if limit > 0 else all_msgs
 
     @classmethod
     def add_user_message(cls, conversation_id: str, message: str):

@@ -23,6 +23,8 @@ from src.tools.analytics_tool import get_sales_statistics
 from src.tools.ppt_tool import create_sales_presentation
 from src.utils.logger import logger
 
+_AGENT_CACHE: dict = {}
+
 def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = None):
     """
     Factory to instantiate configured 100% Free / Zero-Cost LLM provider.
@@ -43,13 +45,17 @@ def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = No
             model=target_model if "gemini" in target_model else "gemini-3.6-flash",
             api_key=settings.GOOGLE_API_KEY,
             google_api_key=settings.GOOGLE_API_KEY,
-            temperature=0.35
+            temperature=0.35,
+            max_retries=1,
+            timeout=15
         )
     elif target_provider == "groq":
         return ChatGroq(
             model=target_model if target_model and "gemini" not in target_model else "openai/gpt-oss-20b",
             groq_api_key=settings.GROQ_API_KEY,
-            temperature=0.35
+            temperature=0.35,
+            max_retries=0,
+            timeout=10
         )
     elif target_provider == "ollama":
         return ChatOllama(
@@ -62,16 +68,14 @@ def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = No
             model="gemini-3.6-flash",
             api_key=settings.GOOGLE_API_KEY,
             google_api_key=settings.GOOGLE_API_KEY,
-            temperature=0.35
+            temperature=0.35,
+            max_retries=1,
+            timeout=15
         )
 
-def create_support_agent(
-    provider: Optional[str] = None, 
-    model_name: Optional[str] = None,
-    page_context_str: Optional[str] = None
-) -> AgentExecutor:
-    """Build and return configured Tool Calling Agent Executor with live page context and autonomous tools."""
-    tools = [
+def get_support_tools():
+    """Return configured list of autonomous agent tools."""
+    return [
         get_order_status,
         list_customer_orders,
         search_products,
@@ -87,16 +91,27 @@ def create_support_agent(
         create_sales_presentation
     ]
 
-    llm = get_llm_model(provider=provider, model_name=model_name)
+def create_support_agent(
+    provider: Optional[str] = None, 
+    model_name: Optional[str] = None,
+    page_context_str: Optional[str] = None
+) -> AgentExecutor:
+    """
+    Build and return configured Tool Calling Agent Executor.
+    Uses in-memory cached instance to eliminate compilation and schema reflection delays.
+    """
+    target_provider = (provider or settings.LLM_PROVIDER).lower()
+    target_model = model_name or settings.DEFAULT_MODEL_NAME
+    cache_key = (target_provider, target_model)
 
-    # Format system prompt with real-time website browsing context
-    formatted_system_prompt = SYSTEM_PROMPT_TEMPLATE.replace(
-        "{page_context_str}", 
-        page_context_str or "No active browsing context provided."
-    )
+    if cache_key in _AGENT_CACHE:
+        return _AGENT_CACHE[cache_key]
+
+    tools = get_support_tools()
+    llm = get_llm_model(provider=target_provider, model_name=target_model)
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", formatted_system_prompt),
+        ("system", SYSTEM_PROMPT_TEMPLATE),
         MessagesPlaceholder(variable_name="chat_history", optional=True),
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad")
@@ -107,12 +122,25 @@ def create_support_agent(
     agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
-        verbose=True,
-        max_iterations=5,
+        verbose=False,
+        max_iterations=4,
         early_stopping_method="generate",
         handle_parsing_errors=True,
         return_intermediate_steps=True
     )
 
-    logger.info(f"Successfully constructed SupportIQ Tool Calling Agent ({provider or settings.LLM_PROVIDER} : {model_name or settings.DEFAULT_MODEL_NAME}) with {len(tools)} tools.")
+    _AGENT_CACHE[cache_key] = agent_executor
+    logger.info(f"Successfully constructed & cached SupportIQ Tool Calling Agent ({target_provider} : {target_model}) with {len(tools)} tools.")
     return agent_executor
+
+def prewarm_agents():
+    """Pre-warm default agent during startup to ensure sub-second first-message latency."""
+    try:
+        logger.info("Pre-warming SupportIQ agent executor in memory...")
+        create_support_agent(provider=settings.LLM_PROVIDER, model_name=settings.DEFAULT_MODEL_NAME)
+        # Also pre-warm groq if key exists
+        if settings.GROQ_API_KEY:
+            create_support_agent(provider="groq", model_name="openai/gpt-oss-20b")
+        logger.info("SupportIQ agent executor pre-warmed successfully.")
+    except Exception as e:
+        logger.warning(f"Agent pre-warming warning: {e}")

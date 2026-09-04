@@ -32,19 +32,24 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Database initialization error on startup: {e}")
 
-    # Warm up embeddings and ChromaDB in background thread to eliminate 40s cold-start latency for users
+    # Warm up embeddings, ChromaDB, and LLM agent executor in background thread to eliminate cold-start latency
     import asyncio
     from src.ingestion.vectorstore import VectorStoreManager
+    from src.agent.builder import prewarm_agents
 
-    def _warmup_vectorstore():
+    def _warmup_services():
         try:
             logger.info("Pre-warming ChromaDB & sentence-transformers in memory...")
             VectorStoreManager().load_vectorstore()
             logger.info("ChromaDB & embeddings pre-warmed successfully. Zero latency ready.")
         except Exception as err:
             logger.warning(f"Vector store warmup skipped: {err}")
+        try:
+            prewarm_agents()
+        except Exception as err:
+            logger.warning(f"Agent warmup skipped: {err}")
 
-    asyncio.get_event_loop().run_in_executor(None, _warmup_vectorstore)
+    asyncio.get_event_loop().run_in_executor(None, _warmup_services)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):

@@ -54,6 +54,7 @@ export default function FloatingAiWidget() {
   // Engine Switchers
   const [selectedEngine, setSelectedEngine] = useState('google:gemini-3.6-flash');
   const [selectedSearchEngine, setSelectedSearchEngine] = useState('serper');
+  const [sessionId, setSessionId] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -98,6 +99,13 @@ export default function FloatingAiWidget() {
   };
 
   useEffect(() => {
+    let sId = sessionStorage.getItem('novacart_session_id');
+    if (!sId) {
+      sId = 'guest_' + Math.random().toString(36).substring(2, 9);
+      sessionStorage.setItem('novacart_session_id', sId);
+    }
+    setSessionId(sId);
+
     const savedLlm = localStorage.getItem('novacart_llm_engine');
     if (savedLlm) setSelectedEngine(savedLlm);
     const savedSearch = localStorage.getItem('novacart_search_engine');
@@ -161,7 +169,7 @@ export default function FloatingAiWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: query,
-          conversation_id: `conv_${user?.id || 'guest'}`,
+          conversation_id: user?.id ? `conv_${user.id}` : `conv_${sessionId || 'guest'}`,
           customer_id: user?.id,
           provider: prov,
           model: mdl,
@@ -286,7 +294,12 @@ export default function FloatingAiWidget() {
             {/* HEADER CONTROLS */}
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setMessages([])}
+                onClick={() => {
+                  setMessages([]);
+                  const newSession = 'guest_' + Math.random().toString(36).substring(2, 9);
+                  setSessionId(newSession);
+                  sessionStorage.setItem('novacart_session_id', newSession);
+                }}
                 title="Clear Chat History"
                 className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all"
               >

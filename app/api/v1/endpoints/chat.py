@@ -29,30 +29,49 @@ async def chat_endpoint(payload: ChatRequestPayload):
         set_active_search_engine(payload.search_engine)
 
     # 2. Format Page Context
-    page_context_str = format_page_context(payload.page_context)
+    page_context_str = format_page_context(payload.page_context) or "No active browsing context provided."
 
-    # 3. Retrieve history & append user message
-    history = SessionMemoryManager.get_messages(payload.conversation_id)
-    SessionMemoryManager.add_user_message(payload.conversation_id, payload.message)
+    # 3. Retrieve history (limited to last 6 messages, before current user message)
+    history = SessionMemoryManager.get_messages(payload.conversation_id, limit=6)
 
-    # 4. Execute Agent with page context
+    # 4. Execute Agent with live page context & automatic zero-delay fallback
     agent = create_support_agent(
         provider=payload.provider, 
-        model_name=payload.model,
-        page_context_str=page_context_str
+        model_name=payload.model
     )
+    
+    agent_input = {
+        "input": payload.message,
+        "chat_history": history,
+        "page_context_str": page_context_str,
+        "requesting_customer_id": payload.customer_id
+    }
+
     try:
-        response_dict = agent.invoke({
-            "input": payload.message,
-            "chat_history": history,
-            "requesting_customer_id": payload.customer_id
-        })
-        
+        response_dict = agent.invoke(agent_input)
+    except Exception as exec_err:
+        logger.warning(f"Primary agent ({payload.provider}) execution failed: {exec_err}. Attempting secondary provider fallback...")
+        try:
+            alt_provider = "google" if payload.provider == "groq" else "groq"
+            alt_model = "gemini-3.6-flash" if alt_provider == "google" else "openai/gpt-oss-20b"
+            fallback_agent = create_support_agent(provider=alt_provider, model_name=alt_model)
+            response_dict = fallback_agent.invoke(agent_input)
+        except Exception as alt_err:
+            logger.warning(f"Secondary agent failed: {alt_err}. Executing direct knowledge base fallback...")
+            from src.tools.knowledge_tool import search_knowledge_base
+            kb_res = search_knowledge_base.invoke({"query": payload.message})
+            response_dict = {
+                "output": f"{kb_res}\n\n*If you have specific order questions, please provide your Order ID.*",
+                "intermediate_steps": []
+            }
+
+    try:
         raw_output = response_dict.get("output", "")
         intermediate_steps = response_dict.get("intermediate_steps", [])
         clean_text = _clean_raw_output(raw_output)
         
-        # Save clean AI response to memory
+        # Save both user query and AI response to memory
+        SessionMemoryManager.add_user_message(payload.conversation_id, payload.message)
         SessionMemoryManager.add_ai_message(payload.conversation_id, clean_text)
         
         # 5. Parse into structured output
@@ -76,28 +95,43 @@ async def stream_chat_endpoint(payload: ChatRequestPayload):
             return
 
         # Format Page Context
-        page_context_str = format_page_context(payload.page_context)
+        page_context_str = format_page_context(payload.page_context) or "No active browsing context provided."
 
         # Set active search engine
         if payload.search_engine:
             set_active_search_engine(payload.search_engine)
 
-        # Fetch history
-        history = SessionMemoryManager.get_messages(payload.conversation_id)
-        SessionMemoryManager.add_user_message(payload.conversation_id, payload.message)
+        # Fetch history (last 6 messages)
+        history = SessionMemoryManager.get_messages(payload.conversation_id, limit=6)
         
         agent = create_support_agent(
             provider=payload.provider,
-            model_name=payload.model,
-            page_context_str=page_context_str
+            model_name=payload.model
         )
         
+        agent_input = {
+            "input": payload.message, 
+            "chat_history": history,
+            "page_context_str": page_context_str,
+            "requesting_customer_id": payload.customer_id
+        }
+
         try:
-            result = agent.invoke({
-                "input": payload.message, 
-                "chat_history": history,
-                "requesting_customer_id": payload.customer_id
-            })
+            try:
+                result = agent.invoke(agent_input)
+            except Exception as exec_err:
+                logger.warning(f"Streaming primary agent error: {exec_err}. Attempting fallback...")
+                try:
+                    alt_provider = "google" if payload.provider == "groq" else "groq"
+                    alt_model = "gemini-3.6-flash" if alt_provider == "google" else "openai/gpt-oss-20b"
+                    fallback_agent = create_support_agent(provider=alt_provider, model_name=alt_model)
+                    result = fallback_agent.invoke(agent_input)
+                except Exception as alt_err:
+                    logger.warning(f"Secondary streaming fallback failed: {alt_err}. Falling back to knowledge retrieval...")
+                    from src.tools.knowledge_tool import search_knowledge_base
+                    kb_res = search_knowledge_base.invoke({"query": payload.message})
+                    result = {"output": str(kb_res)}
+
             full_text = str(result.get("output", ""))
             clean_text = _clean_raw_output(full_text)
             
@@ -105,8 +139,9 @@ async def stream_chat_endpoint(payload: ChatRequestPayload):
             words = clean_text.split(" ")
             for word in words:
                 yield {"event": "message", "data": json.dumps({"token": word + " "})}
-                await asyncio.sleep(0.02)
+                await asyncio.sleep(0.01)
 
+            SessionMemoryManager.add_user_message(payload.conversation_id, payload.message)
             SessionMemoryManager.add_ai_message(payload.conversation_id, clean_text)
             yield {"event": "done", "data": json.dumps({"status": "completed"})}
 
