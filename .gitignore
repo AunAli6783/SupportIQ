@@ -1,43 +1,89 @@
-# Python Byte Code & Cache
+# =============================================================================
+# Python Byte Code & Runtime Cache
+# =============================================================================
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 
-# Virtual Environment
+# =============================================================================
+# Virtual Environments
+# =============================================================================
 venv/
 env/
 ENV/
 .venv/
+env.bak/
+venv.bak/
 
-# Environment Variables & API Keys (CRITICAL SECURITY)
+# =============================================================================
+# Secrets, Environment Variables & API Keys (CRITICAL SECURITY)
+# =============================================================================
 .env
 .env.local
+.env.*.local
 *.env
+*.pem
+*.key
+*.cert
+*.crt
 
-# Local Chroma Database & Vector Index Storage
+# =============================================================================
+# Local Database & Storage Directories
+# =============================================================================
 storage/
 storage/chromadb/
+storage/reports/*.pptx
 *.sqlite3
+*.db
+*.db-journal
+*.sqlite
 
-# Logs & Temporary Files
+# =============================================================================
+# Node.js & Next.js Frontend Exclusions
+# =============================================================================
+node_modules/
+frontend/node_modules/
+frontend/.next/
+.next/
+frontend/out/
+out/
+frontend/.vercel/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts.bak
+
+# =============================================================================
+# Logs & Temporary Scratch Files
+# =============================================================================
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 logs/
 tmp/
-.ds_store
+temp/
+.DS_Store
 Thumbs.db
+desktop.ini
 
-# IDE & Editor Settings
+# =============================================================================
+# IDE, Editor & OS Settings
+# =============================================================================
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Node / Next.js Frontend Exclusions
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/.vercel/
+*~
+*.sublime-project
+*.sublime-workspace
+.agents/
