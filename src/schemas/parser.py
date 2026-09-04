@@ -45,9 +45,25 @@ def _clean_raw_output(raw_output: Any) -> str:
         text_match = re.search(r"['\"]text['\"]\s*:\s*(?:\"(.*?)\"|'(.*?)'),\s*['\"](?:index|extras)", text, re.DOTALL)
         if text_match:
             matched = text_match.group(1) or text_match.group(2) or ""
-            return matched.replace("\\n", "\n").replace('\\"', '"').replace("\\'", "'").strip()
+            text = matched.replace("\\n", "\n").replace('\\"', '"').replace("\\'", "'").strip()
 
-    return text
+    # 4. Clean raw document chunk headers if knowledge base fallback was passed directly
+    if "--- DOCUMENT CHUNK" in text:
+        # Strip the technical headers like '--- DOCUMENT CHUNK 1 [Source: ...] ---'
+        text = re.sub(r"---\s*DOCUMENT CHUNK\s*\d+\s*\[Source:.*?\]\s*---", "", text)
+        # Strip catalog disclaimer lines
+        text = re.sub(r"Catalog date:.*", "", text)
+        text = re.sub(r"Catalog stock is not guaranteed to be real-time.*", "", text)
+        # Normalize consecutive blank lines
+        text = re.sub(r"\n{3,}", "\n\n", text).strip()
+        if not text.startswith("Here is"):
+            text = f"Here is the official information from NovaCart:\n\n{text}"
+
+    # 5. Fix common encoding artifacts & non-breaking spaces
+    text = text.replace("\u2011", "-").replace("\u2013", "-").replace("\u2014", " - ")
+    text = text.replace("\u202f", " ").replace("\u00a0", " ")
+
+    return text.strip()
 
 class ResponseParser:
     @staticmethod

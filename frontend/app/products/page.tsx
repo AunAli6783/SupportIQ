@@ -29,11 +29,18 @@ function CatalogContent() {
       if (selectedBrand !== 'all' && p.brand !== selectedBrand) return false;
       // Search query
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const match = p.name.toLowerCase().includes(q) || 
-                      p.description.toLowerCase().includes(q) || 
-                      p.tagline.toLowerCase().includes(q);
-        if (!match) return false;
+        const q = searchQuery.toLowerCase().trim();
+        const pText = `${p.name} ${p.brand} ${p.category} ${p.description} ${p.tagline}`.toLowerCase();
+        
+        // Exact substring
+        if (pText.includes(q)) {
+          // match!
+        } else {
+          // Check normalized keywords (e.g. "iphones" -> "iphone")
+          const keywords = q.split(/\s+/).map(k => (k.endsWith('s') && k.length > 3 ? k.slice(0, -1) : k));
+          const allKeywordsMatch = keywords.every(kw => pText.includes(kw));
+          if (!allKeywordsMatch) return false;
+        }
       }
       // Price ceiling
       if (p.price > maxPrice) return false;

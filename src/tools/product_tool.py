@@ -36,7 +36,18 @@ def search_products(
         if in_stock_only:
             db_query = db_query.filter(Product.stock > 0)
 
-        q_clean = query.strip()
+        q_clean = query.strip().lower()
+        
+        # Normalize common plurals
+        words = q_clean.split()
+        normalized_words = []
+        for w in words:
+            if w.endswith("s") and len(w) > 3 and not w.endswith("ss"):
+                normalized_words.append(w[:-1])
+            else:
+                normalized_words.append(w)
+        
+        # 1. Try exact or multi-word pattern
         search_pattern = f"%{q_clean}%"
         matches = db_query.filter(
             or_(
@@ -48,6 +59,24 @@ def search_products(
                 Product.id.ilike(search_pattern)
             )
         ).limit(6).all()
+
+        # 2. If no exact match, search using normalized keywords
+        if not matches and normalized_words:
+            keyword_filters = []
+            for kw in normalized_words:
+                if len(kw) >= 2:
+                    kw_pattern = f"%{kw}%"
+                    keyword_filters.append(
+                        or_(
+                            Product.name.ilike(kw_pattern),
+                            Product.brand.ilike(kw_pattern),
+                            Product.category.ilike(kw_pattern),
+                            Product.description.ilike(kw_pattern),
+                            Product.tagline.ilike(kw_pattern)
+                        )
+                    )
+            if keyword_filters:
+                matches = db_query.filter(or_(*keyword_filters)).limit(6).all()
 
         if not matches:
             filters_applied = []

@@ -22,38 +22,47 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem('novacart_cart');
-    if (saved) {
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== 'undefined') {
       try {
-        setItems(JSON.parse(saved));
+        const saved = localStorage.getItem('novacart_cart');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
+        }
       } catch (e) {
         console.error('Failed to parse cart storage', e);
       }
     }
-  }, []);
+    return [];
+  });
 
+  // Persist cart to localStorage whenever items change
   useEffect(() => {
-    if (mounted) {
-      localStorage.setItem('novacart_cart', JSON.stringify(items));
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('novacart_cart', JSON.stringify(items));
+      } catch (e) {
+        console.error('Failed to save cart storage', e);
+      }
     }
-  }, [items, mounted]);
+  }, [items]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
+    if (!product || !product.id) return;
+    const addQty = Math.max(1, quantity || 1);
+    const maxStock = (product.stock && product.stock > 0) ? product.stock : 99;
+
     setItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
         return prev.map((item) =>
           item.product.id === product.id
-            ? { ...item, quantity: Math.min(item.quantity + quantity, product.stock) }
+            ? { ...item, quantity: Math.min(item.quantity + addQty, maxStock) }
             : item
         );
       }
-      return [...prev, { product, quantity: Math.min(quantity, product.stock) }];
+      return [...prev, { product, quantity: Math.min(addQty, maxStock) }];
     });
   };
 
@@ -67,11 +76,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setItems((prev) =>
-      prev.map((item) =>
-        item.product.id === productId
-          ? { ...item, quantity: Math.min(quantity, item.product.stock) }
-          : item
-      )
+      prev.map((item) => {
+        if (item.product.id !== productId) return item;
+        const maxStock = (item.product.stock && item.product.stock > 0) ? item.product.stock : 99;
+        return { ...item, quantity: Math.min(quantity, maxStock) };
+      })
     );
   };
 

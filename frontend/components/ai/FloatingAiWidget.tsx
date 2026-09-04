@@ -52,7 +52,7 @@ export default function FloatingAiWidget() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Engine Switchers
-  const [selectedEngine, setSelectedEngine] = useState('google:gemini-3.6-flash');
+  const [selectedEngine, setSelectedEngine] = useState('groq:openai/gpt-oss-120b');
   const [selectedSearchEngine, setSelectedSearchEngine] = useState('serper');
   const [sessionId, setSessionId] = useState('');
 
