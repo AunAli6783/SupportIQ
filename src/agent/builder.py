@@ -11,9 +11,10 @@ from langchain_ollama import ChatOllama
 
 from src.config.settings import settings
 from src.agent.prompts import SYSTEM_PROMPT_TEMPLATE
-from src.tools.order_tool import get_order_status
+from src.tools.order_tool import get_order_status, list_customer_orders
 from src.tools.product_tool import search_products
 from src.tools.inventory_tool import check_inventory
+from src.tools.action_tool import cancel_order, request_order_return, update_shipping_address
 from src.tools.calculator_tool import calculate
 from src.tools.knowledge_tool import search_knowledge_base
 from src.tools.escalation_tool import escalate_to_human
@@ -69,11 +70,15 @@ def create_support_agent(
     model_name: Optional[str] = None,
     page_context_str: Optional[str] = None
 ) -> AgentExecutor:
-    """Build and return configured Tool Calling Agent Executor with live page context."""
+    """Build and return configured Tool Calling Agent Executor with live page context and autonomous tools."""
     tools = [
         get_order_status,
+        list_customer_orders,
         search_products,
         check_inventory,
+        cancel_order,
+        request_order_return,
+        update_shipping_address,
         calculate,
         search_knowledge_base,
         escalate_to_human,
@@ -103,11 +108,11 @@ def create_support_agent(
         agent=agent,
         tools=tools,
         verbose=True,
-        max_iterations=4,
+        max_iterations=5,
         early_stopping_method="generate",
         handle_parsing_errors=True,
         return_intermediate_steps=True
     )
 
-    logger.info(f"Successfully constructed SupportIQ Tool Calling Agent ({provider or settings.LLM_PROVIDER} : {model_name or settings.DEFAULT_MODEL_NAME}).")
+    logger.info(f"Successfully constructed SupportIQ Tool Calling Agent ({provider or settings.LLM_PROVIDER} : {model_name or settings.DEFAULT_MODEL_NAME}) with {len(tools)} tools.")
     return agent_executor

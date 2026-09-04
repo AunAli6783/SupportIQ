@@ -300,12 +300,12 @@ erDiagram
 ## 6. Architecture Roadmap & Milestone Tracker
 
 | Phase | Milestone | Status | Key Implementations & Components |
-| :--- | :--- | :---: | :--- |
-| **Phase 01** | **NovaCart Storefront Frontend** | ✅ **Done** | Next.js 14 Storefront, 12 Flagship Tech Products (Apple, Samsung, Dell, Lenovo, ASUS, Google, Sony), Cart (`/cart`), Checkout (`/checkout`), Order Tracking (`/orders`), and Embedded Floating Nova AI Widget. |
-| **Phase 02** | **Relational Database & Store Backend** | ✅ **Done** | PostgreSQL / SQLite relational database (`novacart.db`) with SQLAlchemy ORM models (`User`, `Category`, `Product`, `Order`, `OrderItem`, `ReturnRequest`), automated seed migration script, live inventory deduction, and 7 high-performance FastAPI Storefront REST endpoints (`/api/v1/store/products`, `/orders`, `/inventory`, `/auth/login`). |
+| :--- | :--- | :--- | :--- |
+| **Phase 01** | **NovaCart Storefront Frontend** | ✅ **Done** | Next.js 14 Storefront, Flagship Tech Products (Apple, Samsung, Dell, Lenovo, ASUS, Google, Sony), Cart (`/cart`), Checkout (`/checkout`), Order Tracking (`/orders`), and Embedded Floating Nova AI Widget. |
+| **Phase 02** | **Relational Database & Store Backend** | ✅ **Done** | PostgreSQL / SQLite relational database (`novacart.db`) with SQLAlchemy ORM models (`User`, `Category`, `Product`, `Order`, `OrderItem`, `ReturnRequest`), automated seed migration script, live inventory deduction, and high-performance FastAPI Storefront REST endpoints (`/api/v1/store/products`, `/orders`, `/inventory`, `/auth/login`). |
 | **Phase 03** | **Live AI Widget & Context Bridge** | ✅ **Done** | Real-time browser page context bridge (`current_path`, `viewing_product`, `cart_state`, `customer_profile`), dynamic page-adaptive suggestion chips, prompt context resolution rules, and live `check_inventory` tool integration. |
-| **Phase 04** | **SQL Database Agentic Tools** | ⏳ **Next** | Live database-backed `search_products`, `get_order_status`, and `check_inventory` with real-time stock counters. |
-| **Phase 05** | **Context-Aware RAG & Policy Grounding** | 📋 **Planned** | Dual-source synthesis combining live database product specs with official ChromaDB vector policy documents. |
-| **Phase 06** | **Autonomous Agentic Actions** | 📋 **Planned** | Self-service order cancellations with automated stock replenishment, RMA return request generation, and support tickets. |
-| **Phase 07** | **Authentication & Multi-Tenant Security** | 📋 **Planned** | JWT session token verification and cross-customer authorization barriers (`customer_id` ownership checks). |
-| **Phase 08** | **Production Analytics & Deployment** | 📋 **Planned** | Live sales analytics dashboard, automated executive PowerPoint presentation generation (`.pptx`) from SQL data, and Docker Compose orchestration. |
+| **Phase 04** | **SQL Database Agentic Tools** | ✅ **Done** | Upgraded `search_products` with multi-attribute budget, category, and in-stock filtering; enhanced `get_order_status` with return request visibility; added `list_customer_orders` tool. |
+| **Phase 05** | **Context-Aware RAG & Policy Grounding** | ✅ **Done** | Dual-source synthesis combining live database product specs with official ChromaDB vector policy documents, backed by in-memory singleton caching and startup pre-warming. |
+| **Phase 06** | **Autonomous Agentic Actions** | ✅ **Done** | Autonomous `cancel_order` with real-time stock replenishment; `request_order_return` generating official RMA numbers; and `update_shipping_address` with pre-dispatch validation. Both agent tools and frontend REST endpoints implemented. |
+| **Phase 07** | **Authentication & Multi-Tenant Security** | ✅ **Done** | Customer ownership enforcement (`ENFORCE_ORDER_OWNERSHIP`), cross-account isolation barriers, and JWT session bearer token authentication in FastAPI gateway. |
+| **Phase 08** | **Production Analytics & Presentation** | ✅ **Done** | Automated executive sales presentation generation (`create_sales_presentation` via `python-pptx`), live sales statistics computation (`get_sales_statistics`), and automated integration verification test suite. |
