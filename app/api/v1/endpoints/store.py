@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from src.database.session import get_db
-from src.database.models import Product, Order, OrderItem, User, Category, ReturnRequest
+from src.database.models import Product, Order, OrderItem, User, Category, ReturnRequest, CartItem
 from src.schemas.store import (
     ProductResponse, 
     OrderCreateRequest, 
@@ -17,7 +17,10 @@ from src.schemas.store import (
     AddressUpdateRequest,
     InventoryCheckResponse,
     LoginRequest,
-    LoginResponse
+    LoginResponse,
+    CartItemAddRequest,
+    CartItemResponse,
+    CartResponse
 )
 from src.utils.logger import logger
 
@@ -336,3 +339,110 @@ def update_order_address(payload: AddressUpdateRequest, db: Session = Depends(ge
     db.commit()
     db.refresh(order)
     return {"message": "Shipping address updated successfully", "order": order.to_dict()}
+
+
+# ==========================================
+# Real-Time Cart CRUD Endpoints
+# ==========================================
+
+@router.get("/cart/{customer_id}", response_model=CartResponse)
+def get_customer_cart_items(customer_id: str, db: Session = Depends(get_db)):
+    """Retrieve current shopping cart items from database for a specific customer."""
+    target_cust = customer_id.strip()
+    cart_items = db.query(CartItem).filter(CartItem.customer_id == target_cust).all()
+    
+    total_pkr = 0.0
+    item_responses = []
+    for item in cart_items:
+        item_dict = item.to_dict()
+        unit_price = item.product.price if item.product else 0.0
+        total_pkr += unit_price * item.quantity
+        item_responses.append(item_dict)
+        
+    total_usd = round(total_pkr / 280, 2)
+    return {
+        "customer_id": target_cust,
+        "items": item_responses,
+        "item_count": sum(i.quantity for i in cart_items),
+        "total_amount_pkr": total_pkr,
+        "total_amount_usd": total_usd
+    }
+
+
+@router.post("/cart", response_model=CartResponse)
+def add_or_update_cart_item(payload: CartItemAddRequest, db: Session = Depends(get_db)):
+    """Add a product to cart or increment quantity in the database."""
+    target_cust = payload.customer_id.strip()
+    target_prod = payload.product_id.strip()
+    qty = max(1, payload.quantity)
+    
+    # Ensure customer exists
+    customer = db.query(User).filter(User.id == target_cust).first()
+    if not customer:
+        customer = User(
+            id=target_cust,
+            name="Valued Customer",
+            email=f"{target_cust.lower()}@novacart.pk",
+            phone="+92 300 1234567",
+            city="Islamabad"
+        )
+        db.add(customer)
+        db.flush()
+        
+    product = db.query(Product).filter(Product.id == target_prod).first()
+    if not product:
+        # Check by name fuzzy
+        product = db.query(Product).filter(Product.name.ilike(f"%{target_prod}%")).first()
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Product '{target_prod}' not found in catalog."
+            )
+
+    cart_item = db.query(CartItem).filter(
+        CartItem.customer_id == target_cust,
+        CartItem.product_id == product.id
+    ).first()
+
+    if cart_item:
+        cart_item.quantity += qty
+    else:
+        cart_item = CartItem(
+            customer_id=target_cust,
+            product_id=product.id,
+            quantity=qty
+        )
+        db.add(cart_item)
+
+    db.commit()
+    logger.info(f"Database cart updated for '{target_cust}': added '{product.name}' (Qty: {qty})")
+    
+    return get_customer_cart_items(target_cust, db)
+
+
+@router.delete("/cart/{customer_id}/{product_id}", response_model=CartResponse)
+def remove_item_from_cart(customer_id: str, product_id: str, db: Session = Depends(get_db)):
+    """Remove a specific item from the customer's cart."""
+    target_cust = customer_id.strip()
+    cart_item = db.query(CartItem).filter(
+        CartItem.customer_id == target_cust,
+        CartItem.product_id == product_id.strip()
+    ).first()
+
+    if cart_item:
+        db.delete(cart_item)
+        db.commit()
+        logger.info(f"Removed product '{product_id}' from customer '{target_cust}' cart.")
+
+    return get_customer_cart_items(target_cust, db)
+
+
+@router.delete("/cart/{customer_id}")
+def clear_customer_cart(customer_id: str, db: Session = Depends(get_db)):
+    """Clear all items from customer's database cart."""
+    target_cust = customer_id.strip()
+    db.query(CartItem).filter(CartItem.customer_id == target_cust).delete()
+    db.commit()
+    logger.info(f"Cleared database cart for customer '{target_cust}'.")
+    return {"message": "Cart cleared successfully", "customer_id": target_cust, "items": []}
+

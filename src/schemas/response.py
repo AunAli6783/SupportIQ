@@ -40,6 +40,10 @@ class SupportResponse(BaseModel):
         default_factory=list, 
         description="Suggested follow-up actions for customer."
     )
+    cart_action: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Metadata payload for real-time cart mutations (e.g. add/remove product)."
+    )
 
 class ChatRequestPayload(BaseModel):
     message: str = Field(description="Customer question or instruction.")

@@ -21,6 +21,7 @@ from src.tools.escalation_tool import escalate_to_human
 from src.tools.internet_tool import search_internet
 from src.tools.analytics_tool import get_sales_statistics
 from src.tools.ppt_tool import create_sales_presentation
+from src.tools.cart_tool import add_to_cart, remove_from_cart, get_customer_cart
 from src.utils.logger import logger
 
 _AGENT_CACHE: dict = {}
@@ -46,8 +47,8 @@ def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = No
             api_key=settings.GOOGLE_API_KEY,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.35,
-            max_retries=1,
-            timeout=15
+            max_retries=2,
+            timeout=60
         )
     elif target_provider == "groq":
         return ChatGroq(
@@ -55,7 +56,7 @@ def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = No
             groq_api_key=settings.GROQ_API_KEY,
             temperature=0.35,
             max_retries=0,
-            timeout=10
+            timeout=15
         )
     elif target_provider == "ollama":
         return ChatOllama(
@@ -69,8 +70,8 @@ def get_llm_model(provider: Optional[str] = None, model_name: Optional[str] = No
             api_key=settings.GOOGLE_API_KEY,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.35,
-            max_retries=1,
-            timeout=15
+            max_retries=2,
+            timeout=60
         )
 
 def get_support_tools():
@@ -88,7 +89,10 @@ def get_support_tools():
         escalate_to_human,
         search_internet,
         get_sales_statistics,
-        create_sales_presentation
+        create_sales_presentation,
+        add_to_cart,
+        remove_from_cart,
+        get_customer_cart
     ]
 
 def create_support_agent(

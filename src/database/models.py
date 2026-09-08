@@ -198,3 +198,28 @@ class ReturnRequest(Base):
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
+
+
+class CartItem(Base):
+    """Real-time database persistent cart item for customer."""
+    __tablename__ = "cart_items"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(String(50), ForeignKey("users.id"), nullable=False, index=True)
+    product_id = Column(String(50), ForeignKey("products.id"), nullable=False, index=True)
+    quantity = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    product = relationship("Product")
+    customer = relationship("User")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "customer_id": self.customer_id,
+            "product_id": self.product_id,
+            "quantity": self.quantity,
+            "product": self.product.to_dict() if self.product else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+

@@ -78,6 +78,7 @@ class ResponseParser:
         category = "general_inquiry"
         sources = []
         confidence = 0.95
+        cart_action = None
 
         # Format output string cleanly
         answer_text = _clean_raw_output(raw_output)
@@ -95,6 +96,15 @@ class ResponseParser:
                     category = "order_status"
                     if "SECURITY DENIED" in str(observation):
                         category = "security_denied"
+                elif tool_name in ["add_to_cart", "remove_from_cart", "get_customer_cart"]:
+                    category = "cart_action"
+                    obs_str = str(observation)
+                    if "CART_ACTION_SUCCESS:" in obs_str:
+                        try:
+                            json_str = obs_str.split("CART_ACTION_SUCCESS:", 1)[1].strip()
+                            cart_action = json.loads(json_str)
+                        except Exception as e:
+                            logger.warning(f"Failed to parse CART_ACTION_SUCCESS json: {e}")
                 elif tool_name == "search_products":
                     category = "product_search"
                 elif tool_name == "calculate":
@@ -130,12 +140,14 @@ class ResponseParser:
         suggested = []
         if category == "order_status":
             suggested = ["Track delivery on carrier website", "Modify shipping address", "Cancel order"]
+        elif category == "cart_action":
+            suggested = ["View Shopping Cart", "Proceed to Checkout", "Continue Shopping"]
         elif category == "policy_inquiry":
             suggested = ["View full return policy", "Speak with an agent"]
         elif category == "escalation":
             suggested = ["Check ticket status", "Upload receipt"]
         elif category == "product_search":
-            suggested = ["Compare specifications", "Check shipping time", "Place order"]
+            suggested = ["Compare specifications", "Check shipping time", "Add to Cart"]
         elif category == "presentation_generation":
             suggested = ["Download PowerPoint (.pptx)", "View Product Breakdown", "Show Monthly Trends"]
         elif category == "sales_analytics":
@@ -147,5 +159,6 @@ class ResponseParser:
             confidence=confidence,
             requires_human=requires_human,
             sources=sources,
-            suggested_actions=suggested
+            suggested_actions=suggested,
+            cart_action=cart_action
         )

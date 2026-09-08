@@ -1,17 +1,28 @@
 sku,name,category,price_pkr,stock,ram_gb,storage_gb,rating,warranty_months
-NB-P14-32,NovaBook Pro 14,Laptop,289999,12,32,1024,4.9,24
-NB-A15-16,NovaBook Air 15,Laptop,219999,24,16,512,4.7,24
-NG-X16-32,NovaGame X16,Laptop,399999,7,32,1024,4.8,24
-NB-E13-8,NovaBook Essential 13,Laptop,149999,35,8,256,4.5,12
-NP-S-256,NovaPhone S,Smartphone,149999,18,12,256,4.8,12
-NP-L-128,NovaPhone Lite,Smartphone,89999,31,8,128,4.4,12
-NP-U-512,NovaPhone Ultra,Smartphone,219999,14,16,512,4.9,24
-NC-65W,NovaCharge 65W USB-C Charger,Accessory,9999,42,,,4.6,12
-NC-120W,NovaCharge 120W Fast Hub,Accessory,18999,28,,,4.8,12
-NBUD-PRO,NovaBuds Pro,Audio,24999,35,,,4.7,12
-NBUD-AIR,NovaBuds Air,Audio,12999,50,,,4.5,12
-NPS-14,NovaProtect Sleeve 14,Accessory,4999,55,,,4.6,6
-NPS-16,NovaProtect Sleeve 16,Accessory,5999,40,,,4.6,6
-NDIS-27,NovaVision 27-inch 4K Monitor,Display,119999,15,,,4.8,36
-NK-MECH,NovaType Mechanical Keyboard,Accessory,14999,45,,,4.7,12
-NM-RGB,NovaGrip Wireless Gaming Mouse,Accessory,8999,60,,,4.6,12
+P-1002,Samsung Galaxy S26 Ultra 5G,Smartphone,430000,16,16,512,5.0,12
+P-1005,Apple iPhone 18 Pro Max,Smartphone,495000,8,12,512,5.0,12
+P-1027,Apple iPhone Ultra Foldable,Smartphone,650000,5,16,512,5.0,24
+P-1028,Apple iPhone 17 Pro Max,Smartphone,385000,22,12,256,4.9,12
+P-1029,Apple iPhone 17 Air,Smartphone,320000,18,8,256,4.9,12
+P-1030,Samsung Galaxy Z Fold 7 5G,Smartphone,540000,7,16,512,4.9,12
+P-1008,Google Pixel 10 Pro,Smartphone,340000,14,16,256,4.9,12
+P-1031,Huawei Mate XT 2 Tri-Fold,Smartphone,780000,4,16,1024,5.0,12
+P-1001,Apple MacBook Pro 16" M5 Max,Laptop,560000,9,48,1024,5.0,24
+P-1013,Apple MacBook Pro 14" M5 Pro,Laptop,440000,14,24,1024,4.9,12
+P-1003,Dell XPS 16 Panther Lake Tandem OLED,Laptop,490000,10,32,1024,4.9,24
+P-1007,ASUS ROG Zephyrus G16 RTX 5080,Laptop,570000,6,32,2048,5.0,24
+P-1004,Lenovo Legion Pro 7i Gen 10 RTX 5090,Laptop,680000,5,64,2048,5.0,24
+P-1009,Lenovo ThinkPad X1 Carbon Gen 13,Laptop,430000,12,32,1024,4.9,36
+P-1014,Boso Over-Ear Wireless Headphone,Audio,89000,28,,,4.9,12
+P-1010,Sony WH-1000XM5 Wireless Headphones,Audio,95000,22,,,4.9,12
+P-1015,Apple AirPods Pro 2 USB-C,Audio,68000,35,,,4.9,12
+P-1018,Sono Playgo 5 Portable Speaker,Audio,158000,14,,,4.9,24
+P-1019,Xomia Sport Water Resistance Watch,Wearable,42000,30,,,4.8,12
+P-1020,Okodo Hero 11+ Black 5.3K Action Camera,Camera,49000,20,,,4.9,12
+P-1021,Apple Watch Ultra 2 Titanium,Wearable,245000,14,,,5.0,12
+P-1022,Logitek Bluetooth Mechanical Keyboard,Accessory,36000,45,,,4.8,24
+P-1023,Anker Prime 240W GaN Station,Accessory,38000,50,,,4.9,24
+P-1024,Apple MagSafe Charger 25W,Accessory,13500,60,,,4.9,12
+P-1025,Samsung 45W Super Fast Charger,Accessory,8500,75,,,4.8,6
+P-1026,Logitech MX Master 3S Mouse,Accessory,29000,40,,,5.0,24
+P-1011,Apple iPad Pro 13" M4 Tandem OLED,Display,340000,10,8,256,4.9,12

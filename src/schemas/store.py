@@ -82,3 +82,24 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     customer: Dict[str, Any]
+
+class CartItemAddRequest(BaseModel):
+    customer_id: str = Field(..., description="Customer ID, e.g. CUS-001")
+    product_id: str = Field(..., description="Product SKU ID, e.g. P-1005")
+    quantity: int = Field(default=1, gt=0, description="Quantity to add")
+
+class CartItemResponse(BaseModel):
+    id: int
+    customer_id: str
+    product_id: str
+    quantity: int
+    product: Optional[Dict[str, Any]] = None
+    created_at: Optional[str] = None
+
+class CartResponse(BaseModel):
+    customer_id: str
+    items: List[CartItemResponse]
+    item_count: int
+    total_amount_pkr: float
+    total_amount_usd: float
+
