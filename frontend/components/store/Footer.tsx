@@ -8,62 +8,60 @@ import {
   MapPin, 
   ShieldCheck, 
   Truck, 
-  RefreshCw, 
+  RotateCcw, 
   MessageSquare, 
   ArrowRight,
   Sparkles,
-  Zap,
   Lock
 } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="relative bg-[#0F1424] text-white mt-16 pt-16 pb-12 border-t border-slate-800 overflow-hidden">
+    <footer className="relative bg-slate-900 text-white mt-16 pt-16 pb-12 border-t border-slate-800 overflow-hidden">
       {/* Glow highlight */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-[#008ECC] to-transparent" />
-      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#008ECC]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-emerald-500 to-transparent" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 relative z-10">
         
-        {/* VALUE PROPOSITION GRID */}
+        {/* VALUE PROPOSITION GRID (Figma Swoo style) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pb-12 border-b border-slate-800">
-          <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
-            <div className="w-12 h-12 rounded-xl bg-[#008ECC]/20 border border-[#008ECC]/30 flex items-center justify-center shrink-0">
-              <Truck className="w-6 h-6 text-[#008ECC]" />
+          <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/5">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <Truck className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white leading-tight">Express Delivery</p>
-              <p className="text-xs text-slate-400 mt-0.5">Leopard & TCS 24-48h Tracking</p>
+              <p className="text-sm font-bold text-white leading-tight">Free Shipping Over $199</p>
+              <p className="text-xs text-slate-400 mt-0.5">Nationwide Express Courier</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
+          <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/5">
             <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
               <p className="text-sm font-bold text-white leading-tight">100% Genuine Tech</p>
-              <p className="text-xs text-slate-400 mt-0.5">Official Brand Sealed Boxes</p>
+              <p className="text-xs text-slate-400 mt-0.5">Authorized Official Retailer</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0">
-              <RefreshCw className="w-6 h-6 text-purple-400" />
+          <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/5">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <RotateCcw className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white leading-tight">30-Day Easy Returns</p>
-              <p className="text-xs text-slate-400 mt-0.5">Hassle-free replacement policy</p>
+              <p className="text-sm font-bold text-white leading-tight">30 Days Money Back</p>
+              <p className="text-xs text-slate-400 mt-0.5">Guaranteed Customer Satisfaction</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
-            <div className="w-12 h-12 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0">
-              <MessageSquare className="w-6 h-6 text-sky-400" />
+          <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/5">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <MessageSquare className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white leading-tight">Nova AI Support 24/7</p>
-              <p className="text-xs text-slate-400 mt-0.5">Context-aware instant answers</p>
+              <p className="text-sm font-bold text-white leading-tight">Swoo AI Support 24/7</p>
+              <p className="text-xs text-slate-400 mt-0.5">Hotline: (025) 3886 25 16</p>
             </div>
           </div>
         </div>
@@ -71,32 +69,33 @@ export default function Footer() {
         {/* MAIN FOOTER COLUMNS */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 py-12">
           
-          {/* Brand & Mission Statement */}
+          {/* Brand & Contact */}
           <div className="md:col-span-5 flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#008ECC] to-sky-400 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-sky-500/20">
-                N
+              <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-black text-2xl shadow-md">
+                S
               </div>
-              <span className="text-2xl font-black text-white tracking-tight">
-                Nova<span className="text-[#008ECC]">Cart</span>
-              </span>
+              <div className="flex flex-col">
+                <span className="text-2xl font-black text-white tracking-tight leading-none">
+                  SWOO
+                </span>
+                <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase mt-0.5">
+                  TECH MART
+                </span>
+              </div>
             </div>
             <p className="text-xs text-slate-300 max-w-sm leading-relaxed">
-              Pakistan&apos;s leading authorized retailer for 2024–2026 AI laptops, flagship smartphones, and professional creator hardware. Grounded by the SupportIQ AI Customer Engine.
+              Your premium destination for 2026 flagship tech products: Apple iPhones, Samsung Galaxy AI, MacBook Pro M4 Max, ROG Gaming laptops, and noise-cancelling audio gear.
             </p>
             
             <div className="mt-2 flex flex-col gap-2.5 text-xs text-slate-400">
               <div className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-[#008ECC]" />
-                <span>Customer Care: +92 (051) 918-2132</span>
+                <Phone className="w-4 h-4 text-emerald-400" />
+                <span>Hotline 24/7: <strong>(025) 3886 25 16</strong></span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4 text-[#008ECC]" />
-                <span>Support: care@novacart.pk</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <MapPin className="w-4 h-4 text-[#008ECC]" />
-                <span>NovaCart Tower, Blue Area, Islamabad, Pakistan</span>
+                <Mail className="w-4 h-4 text-emerald-400" />
+                <span>Support: support@swootechmart.com</span>
               </div>
             </div>
           </div>
@@ -105,52 +104,33 @@ export default function Footer() {
           <div className="md:col-span-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Popular Hardware</h4>
             <ul className="space-y-2.5 text-xs text-slate-300">
-              <li><Link href="/products?category=Smartphones" className="hover:text-[#008ECC] transition-colors flex items-center gap-1.5"><span>Smartphones & Flagships</span></Link></li>
-              <li><Link href="/products?category=Laptops" className="hover:text-[#008ECC] transition-colors flex items-center gap-1.5"><span>AI Laptops & Workstations</span></Link></li>
-              <li><Link href="/products?category=Laptops" className="hover:text-[#008ECC] transition-colors flex items-center gap-1.5"><span>RTX 4080 / 4090 Systems</span></Link></li>
-              <li><Link href="/products?category=Audio+%26+Wearables" className="hover:text-[#008ECC] transition-colors flex items-center gap-1.5"><span>Noise-Canceling Audio</span></Link></li>
-              <li><Link href="/products?category=Tablets+%26+Displays" className="hover:text-[#008ECC] transition-colors flex items-center gap-1.5"><span>OLED Tablets & Displays</span></Link></li>
+              <li><Link href="/products?category=Smartphones" className="hover:text-emerald-400 transition-colors">Smartphones & Flagships</Link></li>
+              <li><Link href="/products?category=Laptops" className="hover:text-emerald-400 transition-colors">MacBook & AI Laptops</Link></li>
+              <li><Link href="/products?category=Audio+%26+Wearables" className="hover:text-emerald-400 transition-colors">Noise-Cancelling Audio</Link></li>
+              <li><Link href="/products?category=Tablets+%26+Displays" className="hover:text-emerald-400 transition-colors">Tandem OLED Tablets</Link></li>
+              <li><Link href="/products?category=Accessories" className="hover:text-emerald-400 transition-colors">GaN Fast Chargers</Link></li>
             </ul>
           </div>
 
-          {/* Customer Services */}
+          {/* Customer Services & Protected Orders */}
           <div className="md:col-span-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Customer Trust & Support</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Customer Account & Orders</h4>
             <ul className="space-y-2.5 text-xs text-slate-300">
-              <li><Link href="/orders" className="hover:text-[#008ECC] transition-colors">Real-Time Order Tracking & Stepper</Link></li>
-              <li><Link href="/products" className="hover:text-[#008ECC] transition-colors">30-Day Return & Replacement Policy</Link></li>
-              <li><Link href="/products" className="hover:text-[#008ECC] transition-colors">Official AppleCare & Samsung Care+ Info</Link></li>
-              <li><Link href="/login" className="hover:text-[#008ECC] transition-colors">Customer Profile & Address Manager</Link></li>
+              <li><Link href="/orders" className="hover:text-emerald-400 transition-colors">Track Isolated Customer Orders</Link></li>
+              <li><Link href="/login" className="hover:text-emerald-400 transition-colors">Customer Profile & Sign In</Link></li>
+              <li><Link href="/support" className="hover:text-emerald-400 transition-colors">Resolution Hub & AI Assistant</Link></li>
+              <li><Link href="/cart" className="hover:text-emerald-400 transition-colors">Shopping Cart</Link></li>
             </ul>
-
-            {/* Newsletter / Stay in the Loop */}
-            <div className="mt-5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
-              <span className="text-[11px] font-bold text-white block">Tech Launch Alerts</span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">Receive drop notifications for 2026 releases.</span>
-              <div className="flex gap-2 mt-2">
-                <input 
-                  type="email" 
-                  placeholder="Enter email address" 
-                  className="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 flex-1 focus:outline-none focus:border-[#008ECC]" 
-                />
-                <button className="bg-[#008ECC] hover:bg-[#007BB0] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-colors">
-                  Join
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* BOTTOM COPYRIGHT */}
-        <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3">
-          <p>© 2026 NovaCart Tech Retail Ltd. All rights reserved.</p>
-          <div className="flex items-center gap-4 text-[11px]">
-            <span className="flex items-center gap-1 text-slate-300">
-              <Lock className="w-3 h-3 text-emerald-400" />
-              256-Bit SSL Encrypted Checkout
-            </span>
-            <span>•</span>
-            <span className="text-sky-400 font-medium">Powered by SupportIQ AI Engine</span>
+        {/* BOTTOM COPYRIGHT BAR */}
+        <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <p>© 2026 SWOO TECH MART. All Rights Reserved.</p>
+          <div className="flex items-center gap-6">
+            <span className="hover:text-slate-400 cursor-pointer">Privacy Policy</span>
+            <span className="hover:text-slate-400 cursor-pointer">Terms of Service</span>
+            <span className="hover:text-slate-400 cursor-pointer">Shipping & Refunds</span>
           </div>
         </div>
       </div>

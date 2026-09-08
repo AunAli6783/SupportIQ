@@ -5,9 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import { PRODUCTS, CATEGORIES } from '../../data/products';
 import ProductCard from '../../components/store/ProductCard';
 import { SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 function CatalogContent() {
   const searchParams = useSearchParams();
+  const { currency, formatPrice } = useAuth();
+  
   const initialCategory = searchParams.get('category') || 'all';
   const initialBrand = searchParams.get('brand') || 'all';
   const initialQuery = searchParams.get('q') || '';
@@ -19,7 +22,9 @@ function CatalogContent() {
   const [inStockOnly, setInStockOnly] = useState(false);
   const [sortBy, setSortBy] = useState('featured');
 
-  const brands = ['all', 'Apple', 'Samsung', 'Dell', 'Lenovo', 'ASUS', 'Google', 'Sony'];
+  const brands = useMemo(() => {
+    return ['all', ...Array.from(new Set(PRODUCTS.map((p) => p.brand)))];
+  }, []);
 
   const filteredProducts = useMemo(() => {
     return PRODUCTS.filter((p) => {
@@ -69,11 +74,11 @@ function CatalogContent() {
       {/* PAGE HEADER */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            NovaCart <span className="text-[#008ECC]">Tech Catalog</span>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
+            SWOO <span className="text-emerald-600">Tech Mart Catalog</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Showing {filteredProducts.length} flagship products (2024–2026 Releases)
+            Showing {filteredProducts.length} verified 2026 tech products & accessories
           </p>
         </div>
 
@@ -83,7 +88,7 @@ function CatalogContent() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#008ECC]"
+            className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-600"
           >
             <option value="featured">✨ Featured & Best Deals</option>
             <option value="price-low">💵 Price: Low to High</option>
@@ -95,15 +100,15 @@ function CatalogContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* LEFT SIDEBAR: FILTERS */}
-        <aside className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-6">
+        <aside className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-6">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              <SlidersHorizontal className="w-4 h-4 text-[#008ECC]" />
+            <span className="text-sm font-black text-slate-900 flex items-center gap-1.5 uppercase">
+              <SlidersHorizontal className="w-4 h-4 text-emerald-600" />
               Filters
             </span>
             <button
               onClick={resetFilters}
-              className="text-[11px] font-bold text-[#008ECC] hover:underline flex items-center gap-1"
+              className="text-[11px] font-bold text-emerald-600 hover:underline flex items-center gap-1"
             >
               <RotateCcw className="w-3 h-3" />
               Reset
@@ -112,7 +117,7 @@ function CatalogContent() {
 
           {/* Categories */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Category</h4>
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Category</h4>
             <div className="space-y-1">
               {CATEGORIES.map((c) => (
                 <button
@@ -120,7 +125,7 @@ function CatalogContent() {
                   onClick={() => setSelectedCategory(c.id)}
                   className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center justify-between ${
                     selectedCategory === c.id
-                      ? 'bg-[#008ECC] text-white font-bold'
+                      ? 'bg-emerald-600 text-white font-bold'
                       : 'text-slate-700 hover:bg-slate-50'
                   }`}
                 >
@@ -132,70 +137,75 @@ function CatalogContent() {
 
           {/* Brands */}
           <div className="border-t border-slate-100 pt-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Brand</h4>
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Brand</h4>
             <div className="flex flex-wrap gap-1.5">
               {brands.map((b) => (
                 <button
                   key={b}
                   onClick={() => setSelectedBrand(b)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                     selectedBrand === b
-                      ? 'bg-[#008ECC] text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {b}
+                  {b === 'all' ? 'All Brands' : b}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Max Price Slider */}
+          {/* Price Range */}
           <div className="border-t border-slate-100 pt-4">
-            <div className="flex items-center justify-between text-xs mb-2">
-              <span className="font-bold uppercase tracking-wider text-slate-400">Max Price</span>
-              <span className="font-bold text-[#008ECC]">{maxPrice.toLocaleString()} PKR</span>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Max Price</h4>
+              <span className="text-xs font-bold text-emerald-600">
+                {formatPrice(maxPrice, Math.round(maxPrice / 280))}
+              </span>
             </div>
             <input
               type="range"
-              min="90000"
-              max="600000"
-              step="10000"
+              min={20000}
+              max={600000}
+              step={10000}
               value={maxPrice}
               onChange={(e) => setMaxPrice(Number(e.target.value))}
-              className="w-full accent-[#008ECC] cursor-pointer"
+              className="w-full accent-emerald-600 cursor-pointer"
             />
           </div>
 
-          {/* In-Stock Toggle */}
+          {/* In Stock Only */}
           <div className="border-t border-slate-100 pt-4">
-            <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={inStockOnly}
                 onChange={(e) => setInStockOnly(e.target.checked)}
-                className="rounded text-[#008ECC] focus:ring-[#008ECC] w-4 h-4"
+                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
               />
-              <span>In Stock Only</span>
+              <span className="text-xs font-bold text-slate-700">In-Stock Items Only</span>
             </label>
           </div>
         </aside>
 
-        {/* RIGHT: PRODUCT GRID */}
+        {/* RIGHT MAIN CONTENT: PRODUCT GRID */}
         <main className="lg:col-span-9">
           {filteredProducts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-              <p className="text-lg font-bold text-slate-700">No products match your filters</p>
-              <p className="text-xs text-slate-400 mt-1">Try resetting your category, price range, or search term.</p>
+              <SlidersHorizontal className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <h3 className="text-base font-black text-slate-800 uppercase">No Matching Tech Products Found</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Try adjusting your search criteria or reset your filters.
+              </p>
               <button
                 onClick={resetFilters}
-                className="mt-4 bg-[#008ECC] text-white px-5 py-2 rounded-xl text-xs font-bold"
+                className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition-colors"
               >
                 Reset All Filters
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -209,11 +219,7 @@ function CatalogContent() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-400 text-sm">
-        Loading catalog...
-      </div>
-    }>
+    <Suspense fallback={<div className="p-12 text-center text-xs text-slate-400">Loading SWOO TECH MART Catalog...</div>}>
       <CatalogContent />
     </Suspense>
   );

@@ -45,8 +45,8 @@ interface Message {
 
 export default function FloatingAiWidget() {
   const pathname = usePathname();
-  const { items, totalAmount, itemCount, addToCart } = useCart();
-  const { user } = useAuth();
+  const { items, totalAmount, itemCount, addToCart, refreshCart } = useCart();
+  const { user, requireAuth } = useAuth();
 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -176,11 +176,13 @@ export default function FloatingAiWidget() {
   };
 
   const handleInlineAddToCart = (prod: Product) => {
-    addToCart(prod, 1);
-    setAddedItems((prev) => ({ ...prev, [prod.id]: true }));
-    setTimeout(() => {
-      setAddedItems((prev) => ({ ...prev, [prod.id]: false }));
-    }, 2000);
+    requireAuth(() => {
+      addToCart(prod, 1);
+      setAddedItems((prev) => ({ ...prev, [prod.id]: true }));
+      setTimeout(() => {
+        setAddedItems((prev) => ({ ...prev, [prod.id]: false }));
+      }, 2000);
+    }, `Sign in to add ${prod.name} to your cart.`);
   };
 
   const handleSend = async (textToSend?: string) => {
@@ -197,7 +199,7 @@ export default function FloatingAiWidget() {
     setMessages((prev) => [...prev, userMsg]);
     if (!textToSend) setInput('');
 
-    // Conversational Add to Cart Detection
+    // If customer has intent to add/buy and is not logged in, prompt authentication first
     const qLower = query.toLowerCase();
     const isAddIntent = 
       qLower.includes('add to cart') || 
@@ -206,43 +208,11 @@ export default function FloatingAiWidget() {
       qLower.includes('buy this') ||
       qLower.startsWith('add ');
 
-    if (isAddIntent) {
-      let targetProduct: Product | undefined = viewingProduct || undefined;
-      
-      if (!targetProduct) {
-        for (const p of PRODUCTS) {
-          const pWords = p.name.toLowerCase().split(' ').filter((w) => w.length > 3);
-          if (pWords.some((w) => qLower.includes(w)) || qLower.includes(p.id.toLowerCase())) {
-            targetProduct = p;
-            break;
-          }
-        }
-      }
-
-      if (!targetProduct && messages.length > 0) {
-        const lastAiMsg = [...messages].reverse().find((m) => m.sender === 'assistant');
-        if (lastAiMsg) {
-          const prods = detectProducts(lastAiMsg.text);
-          if (prods.length > 0) {
-            targetProduct = prods[0];
-          }
-        }
-      }
-
-      if (targetProduct) {
-        addToCart(targetProduct, 1);
-        handleInlineAddToCart(targetProduct);
-        const confirmMsg: Message = {
-          id: `msg_cart_${Date.now()}`,
-          sender: 'assistant',
-          text: `🛒 **${targetProduct.name}** (${targetProduct.price.toLocaleString()} PKR) has been added to your shopping cart!\n\n• [👉 View Shopping Cart (${itemCount + 1} items)](/cart)\n• [🔒 Proceed to Checkout](/checkout)`,
-          category: 'cart_action',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          suggestedActions: ['Proceed to Checkout', 'View Shopping Cart', 'Continue Shopping']
-        };
-        setMessages((prev) => [...prev, confirmMsg]);
-        return;
-      }
+    if (isAddIntent && !user) {
+      requireAuth(() => {
+        handleSendMessage(query);
+      }, 'Sign in to add items to your cart, place orders, and view isolated purchases.');
+      return;
     }
 
     setLoading(true);
@@ -255,7 +225,7 @@ export default function FloatingAiWidget() {
         body: JSON.stringify({
           message: query,
           conversation_id: user?.id ? `conv_${user.id}` : `conv_${sessionId || 'guest'}`,
-          customer_id: user?.id,
+          customer_id: user?.id || 'CUS-001',
           provider: prov,
           model: mdl,
           search_engine: selectedSearchEngine,
@@ -278,6 +248,25 @@ export default function FloatingAiWidget() {
       }
 
       const data = await response.json();
+
+      // Real-time Database Cart Synchronization
+      if (data.cart_action) {
+        const action = data.cart_action;
+        if (action.action === 'add_to_cart') {
+          if (refreshCart) {
+            await refreshCart(user?.id || 'CUS-001');
+          }
+          const matched = PRODUCTS.find((p) => p.id === action.product_id || p.name.toLowerCase().includes((action.product_name || '').toLowerCase()));
+          if (matched) {
+            handleInlineAddToCart(matched);
+          }
+        } else if (action.action === 'remove_from_cart') {
+          if (refreshCart) {
+            await refreshCart(user?.id || 'CUS-001');
+          }
+        }
+      }
+
       const aiMsg: Message = {
         id: `msg_ai_${Date.now()}`,
         sender: 'assistant',
@@ -311,8 +300,8 @@ export default function FloatingAiWidget() {
       {!isOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
           {/* Subtle speech bubble teaser */}
-          <div className="hidden sm:flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-slate-800 text-xs font-bold py-2 px-3.5 rounded-2xl shadow-xl border border-sky-100 animate-in fade-in slide-in-from-right-3 duration-300">
-            <span className="w-2 h-2 rounded-full bg-[#008ECC] animate-ping" />
+          <div className="hidden sm:flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-slate-800 text-xs font-bold py-2 px-3.5 rounded-2xl shadow-xl border border-emerald-100 animate-in fade-in slide-in-from-right-3 duration-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
             <span>
               {viewingProduct ? `Ask about ${viewingProduct.name.split(' ')[0]}!` : 'Need shopping help? Chat with me!'}
             </span>
@@ -322,13 +311,13 @@ export default function FloatingAiWidget() {
           <button
             onClick={() => setIsOpen(true)}
             aria-label="Open Nova AI Assistant"
-            className="relative group p-1.5 rounded-full bg-gradient-to-tr from-[#008ECC] via-sky-500 to-[#212844] shadow-2xl shadow-sky-500/40 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white"
+            className="relative group p-1.5 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-slate-900 shadow-2xl shadow-emerald-500/30 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white"
           >
             {/* Pulsing ring indicator */}
-            <span className="absolute -inset-1 rounded-full bg-sky-400/40 animate-ping pointer-events-none" />
+            <span className="absolute -inset-1 rounded-full bg-emerald-400/40 animate-ping pointer-events-none" />
 
             {/* Circular container with exact 3D robot image */}
-            <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-gradient-to-b from-sky-400 to-[#008ECC] border-2 border-white shadow-inner flex items-center justify-center">
+            <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-gradient-to-b from-emerald-500 to-emerald-700 border-2 border-white shadow-inner flex items-center justify-center">
               <img
                 src="/nova-robot.jpg"
                 alt="Nova AI Robot"
@@ -347,10 +336,10 @@ export default function FloatingAiWidget() {
         <div className="fixed bottom-4 right-4 z-50 w-[94vw] sm:w-[450px] md:w-[480px] h-[660px] max-h-[92vh] bg-slate-950/95 backdrop-blur-2xl text-slate-100 rounded-3xl shadow-2xl border border-slate-800/80 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300 ring-1 ring-white/10">
           
           {/* HEADER */}
-          <div className="p-4 bg-gradient-to-r from-slate-950 via-[#0B132B] to-slate-950 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="p-4 bg-gradient-to-r from-slate-950 via-[#062c19] to-slate-950 border-b border-slate-800/80 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-[#008ECC] shadow-lg shadow-sky-500/25 shrink-0 bg-sky-950/60 p-0.5">
+                <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-lg shadow-emerald-500/25 shrink-0 bg-emerald-950/60 p-0.5">
                   <img
                     src="/nova-robot.jpg"
                     alt="Nova AI Robot"
@@ -365,13 +354,13 @@ export default function FloatingAiWidget() {
               <div>
                 <h3 className="text-sm font-black text-white flex items-center gap-1.5 leading-none tracking-tight">
                   Nova AI Assistant
-                  <span className="text-[10px] font-mono font-bold bg-[#008ECC]/20 text-[#008ECC] px-1.5 py-0.5 rounded-md border border-[#008ECC]/30">2026 PRO</span>
+                  <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-md border border-emerald-500/30">SWOO 2026</span>
                 </h3>
                 <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                   <span>Browsing Context Active</span>
                   <span>•</span>
-                  <span className="text-sky-300 font-bold">{user ? user.name : 'Guest User'}</span>
+                  <span className="text-emerald-300 font-bold">{user ? user.name : 'Guest User'}</span>
                 </p>
               </div>
             </div>
@@ -404,7 +393,7 @@ export default function FloatingAiWidget() {
           <div className="bg-slate-900/80 px-3 py-2 border-b border-slate-800/80 flex items-center justify-between gap-2 text-xs">
             {/* LLM Model Switcher */}
             <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1">
-              <Sparkles className="w-3 h-3 text-sky-400 shrink-0" />
+              <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
               <select
                 value={selectedEngine}
                 onChange={(e) => handleEngineChange(e.target.value)}
@@ -418,7 +407,7 @@ export default function FloatingAiWidget() {
 
             {/* Search Scraper Switcher */}
             <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1">
-              <Globe className="w-3 h-3 text-cyan-400 shrink-0" />
+              <Globe className="w-3 h-3 text-emerald-400 shrink-0" />
               <select
                 value={selectedSearchEngine}
                 onChange={(e) => handleSearchEngineChange(e.target.value)}
@@ -434,16 +423,16 @@ export default function FloatingAiWidget() {
 
           {/* ACTIVE WEBSITE CONTEXT INDICATOR */}
           {viewingProduct ? (
-            <div className="bg-[#008ECC]/15 border-b border-[#008ECC]/30 px-3 py-2 flex items-center justify-between text-[11px] text-sky-300">
+            <div className="bg-emerald-950/40 border-b border-emerald-500/30 px-3 py-2 flex items-center justify-between text-[11px] text-emerald-300">
               <div className="truncate flex items-center gap-1.5">
-                <ShoppingBag className="w-3.5 h-3.5 text-[#008ECC] shrink-0" />
+                <ShoppingBag className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span className="truncate">
                   Viewing: <strong className="text-white">{viewingProduct.name}</strong> ({viewingProduct.price.toLocaleString()} PKR)
                 </span>
               </div>
               <button
                 onClick={() => handleSend(`Does this have an official warranty and is it in stock?`)}
-                className="underline hover:text-white text-[10px] shrink-0 font-bold ml-2"
+                className="underline hover:text-white text-[10px] shrink-0 font-bold ml-2 text-emerald-400"
               >
                 Ask About This
               </button>
@@ -456,7 +445,7 @@ export default function FloatingAiWidget() {
               </span>
               <button
                 onClick={() => handleSend('Do I qualify for free express shipping with my current cart?')}
-                className="underline hover:text-sky-300 text-[10px]"
+                className="underline hover:text-emerald-300 text-[10px]"
               >
                 Check Shipping
               </button>
@@ -476,7 +465,7 @@ export default function FloatingAiWidget() {
                   <div
                     className={`max-w-[94%] rounded-2xl p-3.5 text-xs leading-relaxed relative group transition-all ${
                       msg.sender === 'user'
-                        ? 'bg-gradient-to-r from-[#008ECC] via-sky-500 to-sky-600 text-white rounded-tr-none shadow-lg shadow-sky-500/20 font-medium'
+                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-tr-none shadow-lg shadow-emerald-500/20 font-medium'
                         : 'bg-slate-900/95 text-slate-200 border border-slate-800/80 rounded-tl-none shadow-sm backdrop-blur-md'
                     }`}
                   >
@@ -489,7 +478,7 @@ export default function FloatingAiWidget() {
                           </div>
                         ),
                         thead: ({ node, ...props }) => (
-                          <thead {...props} className="bg-slate-900/90 text-[#008ECC] font-bold uppercase tracking-wider text-[10px]" />
+                          <thead {...props} className="bg-slate-900/90 text-emerald-400 font-bold uppercase tracking-wider text-[10px]" />
                         ),
                         tbody: ({ node, ...props }) => (
                           <tbody {...props} className="divide-y divide-slate-800/60 bg-slate-950/40" />
@@ -508,7 +497,7 @@ export default function FloatingAiWidget() {
                             {...props}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sky-400 hover:text-sky-300 underline font-bold break-all"
+                            className="text-emerald-400 hover:text-emerald-300 underline font-bold break-all"
                           />
                         ),
                         strong: ({ node, ...props }) => (
@@ -527,7 +516,7 @@ export default function FloatingAiWidget() {
                           <p {...props} className="my-1.5 leading-relaxed" />
                         ),
                         code: ({ node, ...props }) => (
-                          <code {...props} className="bg-slate-800 text-sky-300 px-1.5 py-0.5 rounded text-[11px] font-mono" />
+                          <code {...props} className="bg-slate-800 text-emerald-300 px-1.5 py-0.5 rounded text-[11px] font-mono" />
                         )
                       }}
                     >
@@ -540,7 +529,7 @@ export default function FloatingAiWidget() {
                         {detectedProds.map((prod) => (
                           <div
                             key={prod.id}
-                            className="p-2.5 rounded-2xl bg-gradient-to-r from-slate-950 to-slate-900 border border-sky-500/30 flex items-center justify-between gap-3 shadow-md hover:border-sky-400/50 transition-all"
+                            className="p-2.5 rounded-2xl bg-gradient-to-r from-slate-950 to-slate-900 border border-emerald-500/30 flex items-center justify-between gap-3 shadow-md hover:border-emerald-400/50 transition-all"
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
                               <img
@@ -549,9 +538,9 @@ export default function FloatingAiWidget() {
                                 className="w-10 h-10 object-contain rounded-xl bg-slate-800/90 p-1 shrink-0 border border-slate-700"
                               />
                               <div className="min-w-0">
-                                <span className="text-[9px] font-bold uppercase text-[#008ECC] tracking-wider">{prod.brand}</span>
+                                <span className="text-[9px] font-bold uppercase text-emerald-400 tracking-wider">{prod.brand}</span>
                                 <p className="text-[11px] font-bold text-white truncate leading-tight">{prod.name}</p>
-                                <p className="text-[10px] font-black text-sky-300 mt-0.5">
+                                <p className="text-[10px] font-black text-emerald-300 mt-0.5">
                                   {prod.price.toLocaleString()} PKR
                                   {prod.stock > 0 && (
                                     <span className="text-[9px] font-normal text-emerald-400 ml-1.5">• In Stock</span>
@@ -564,7 +553,7 @@ export default function FloatingAiWidget() {
                               className={`px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all shrink-0 active:scale-95 ${
                                 addedItems[prod.id]
                                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/25'
-                                  : 'bg-gradient-to-r from-[#008ECC] to-sky-600 hover:from-[#007BB0] hover:to-sky-700 text-white shadow-md shadow-sky-500/25'
+                                  : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-md shadow-emerald-500/25'
                               }`}
                             >
                               {addedItems[prod.id] ? (
@@ -590,7 +579,7 @@ export default function FloatingAiWidget() {
                         {msg.sources.map((s, idx) => (
                           <span
                             key={idx}
-                            className="text-[10px] bg-slate-950/80 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"
+                            className="text-[10px] bg-slate-950/80 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"
                           >
                             <Globe className="w-2.5 h-2.5" />
                             {s.source}
@@ -617,7 +606,7 @@ export default function FloatingAiWidget() {
                       <button
                         key={i}
                         onClick={() => handleSend(action)}
-                        className="text-[10px] font-bold bg-slate-900/90 hover:bg-sky-950/60 text-sky-300 hover:text-white border border-slate-800 hover:border-[#008ECC] px-3 py-1.5 rounded-full transition-all text-left shadow-xs"
+                        className="text-[10px] font-bold bg-slate-900/90 hover:bg-emerald-950/60 text-emerald-300 hover:text-white border border-slate-800 hover:border-emerald-500 px-3 py-1.5 rounded-full transition-all text-left shadow-xs"
                       >
                         {action}
                       </button>
@@ -632,7 +621,7 @@ export default function FloatingAiWidget() {
 
             {loading && (
               <div className="flex items-center gap-2.5 bg-slate-900/90 border border-slate-800/90 text-slate-300 text-xs px-4 py-3 rounded-2xl w-fit shadow-md animate-pulse">
-                <Sparkles className="w-4 h-4 text-[#008ECC] animate-spin" />
+                <Sparkles className="w-4 h-4 text-emerald-400 animate-spin" />
                 <span className="font-medium">Nova AI is evaluating page context & database...</span>
               </div>
             )}
@@ -656,12 +645,12 @@ export default function FloatingAiWidget() {
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="flex-1 bg-slate-900/90 border border-slate-800 hover:border-slate-700 focus:border-[#008ECC] focus:ring-2 focus:ring-sky-500/20 rounded-2xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none transition-all font-medium"
+              className="flex-1 bg-slate-900/90 border border-slate-800 hover:border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none transition-all font-medium"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="bg-gradient-to-r from-[#008ECC] to-sky-600 hover:from-[#007BB0] hover:to-sky-700 disabled:opacity-40 text-white p-2.5 rounded-2xl transition-all shrink-0 shadow-lg shadow-sky-500/25 active:scale-95"
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white p-2.5 rounded-2xl transition-all shrink-0 shadow-lg shadow-emerald-500/25 active:scale-95"
             >
               <Send className="w-4 h-4" />
             </button>

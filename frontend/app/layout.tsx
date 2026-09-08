@@ -5,10 +5,11 @@ import { AuthProvider } from '../context/AuthContext';
 import Navbar from '../components/store/Navbar';
 import Footer from '../components/store/Footer';
 import FloatingAiWidget from '../components/ai/FloatingAiWidget';
+import AuthModal from '../components/store/AuthModal';
 
 export const metadata = {
-  title: 'NovaCart — Next-Gen Tech Store & AI Support',
-  description: 'Premier e-commerce store for 2024–2026 AI laptops, flagship smartphones, and professional creator gear.',
+  title: 'SWOO TECH MART — Next-Gen Tech Store & AI Support',
+  description: 'Premier multi-purpose e-commerce store for 2026 tech products: iPhones, Samsung Galaxy AI, MacBooks, ROG gaming, and audio gear.',
 };
 
 export default function RootLayout({
@@ -18,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col bg-[#F4F7F9] text-slate-800 antialiased selection:bg-[#008ECC] selection:text-white">
+      <body className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-800 antialiased selection:bg-emerald-600 selection:text-white">
         <AuthProvider>
           <CartProvider>
             <Navbar />
@@ -27,6 +28,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <FloatingAiWidget />
+            <AuthModal />
           </CartProvider>
         </AuthProvider>
       </body>
