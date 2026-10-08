@@ -1,2 +1,0 @@
-
-# SupportIQ Streamlit Frontend Package

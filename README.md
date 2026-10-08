@@ -9,7 +9,7 @@
 
 **SupportIQ** is an enterprise-grade autonomous AI customer support and retail intelligence platform built for **NovaCart**, a modern tech and hardware storefront. It combines real-time context-aware conversational AI, multi-document RAG (Retrieval-Augmented Generation), live relational database actions, multi-engine internet search, and automated executive PowerPoint reporting.
 
-> 📺 **Live Video Walkthrough:** [Watch the Full SupportIQ Platform Demo on Loom](https://www.loom.com/share/bba41910d3a8498ab3824796347cfff9)
+> 📺 **Live Video Walkthrough:** [Watch on Loom](https://www.loom.com/share/bba41910d3a8498ab3824796347cfff9)
 
 ---
 
@@ -17,9 +17,17 @@
 
 Watch the complete demonstration of SupportIQ, featuring the modern e-commerce storefront, user authentication, autonomous cart management, and intelligent customer support:
 
-[![Watch Full Demo on Loom](https://img.shields.io/badge/Watch_Demo_on_Loom-625DF5?style=for-the-badge&logo=loom&logoColor=white)](https://www.loom.com/share/bba41910d3a8498ab3824796347cfff9)
+<p align="center">
 
-- 🔗 **Direct URL:** [https://www.loom.com/share/bba41910d3a8498ab3824796347cfff9](https://www.loom.com/share/bba41910d3a8498ab3824796347cfff9)
+https://github.com/user-attachments/assets/63042481-d05a-49b0-8684-964bf5c12946
+
+</p>
+
+<p align="center">
+  <a href="https://www.loom.com/share/bba41910d3a8498ab3824796347cfff9">
+    <img src="https://img.shields.io/badge/Watch_Full_Demo_on_Loom-625DF5?style=for-the-badge&logo=loom&logoColor=white" alt="Watch Demo on Loom">
+  </a>
+</p>
 
 ---
 
