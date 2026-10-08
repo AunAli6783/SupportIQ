@@ -18,15 +18,12 @@
 Watch the complete demonstration of **SupportIQ**, featuring the modern e-commerce storefront, user authentication, autonomous cart management, and intelligent customer support:
 
 <p align="center">
-  <video src="supportiq.mp4" controls="controls" width="100%" style="max-width: 860px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-    Your browser does not support the video tag. <a href="supportiq.mp4">Click here to watch the demo video directly.</a>
-  </video>
+
+https://github.com/user-attachments/assets/63042481-d05a-49b0-8684-964bf5c12946
+
 </p>
 
 <p align="center">
-  <a href="supportiq.mp4">
-    <img src="https://img.shields.io/badge/▶_Watch_SupportIQ_Demo_Video-supportiq.mp4-16A34A?style=for-the-badge&logo=mediafire&logoColor=white" alt="Play SupportIQ Demo Video">
-  </a>
   <a href="https://www.loom.com/share/bba41910d3a8498ab3824796347cfff9">
     <img src="https://img.shields.io/badge/Watch_on_Loom-625DF5?style=for-the-badge&logo=loom&logoColor=white" alt="Watch on Loom">
   </a>
@@ -37,7 +34,7 @@ Watch the complete demonstration of **SupportIQ**, featuring the modern e-commer
 ## 🖼️ Project Showcase Poster
 
 <p align="center">
-  <img src="SupportIQ_Showcase_Poster.png" alt="SupportIQ Platform Showcase Poster" width="100%" style="max-width: 960px; border-radius: 14px; box-shadow: 0 12px 35px rgba(0,0,0,0.35);">
+  <img src="my_poster.png" alt="SupportIQ Platform Showcase Poster" width="100%" style="max-width: 960px; border-radius: 14px; box-shadow: 0 12px 35px rgba(0,0,0,0.35);">
 </p>
 
 ---
