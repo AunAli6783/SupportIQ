@@ -19,7 +19,7 @@ Watch the complete demonstration of **SupportIQ**, featuring the modern e-commer
 
 <p align="center">
 
-https://github.com/user-attachments/assets/63042481-d05a-49b0-8684-964bf5c12946
+https://github.com/user-attachments/assets/3b358067-7aa6-403f-9c4e-d3e1696fb868
 
 </p>
 
